@@ -20,136 +20,170 @@
 ## Reglas Gramaticales
 
 **<CTE\>**
-=> cte_int
-=> cte_float
+
+- => cte_int
+- => cte_float
 
 **<TYPE\>**
-=> int
-=> float
+
+- => int
+- => float
 
 **<OP_ADITIVO>**
-=> +
-=> -
+
+- => +
+- => -
 
 **<OP_MULTIPLICATIVO>**
-=> \*
-=> /
+
+- => \*
+- => /
 
 **<OP_LÓGICO>**
-=> >
-=> <
-=> !=
+
+- => >
+- => <
+- => !=
 
 **<EXPRESIÓN>**
-=> **<EXP\>**
-=> **<EXP\> <OP_LÓGICO> <EXP\>**
+
+- => **<EXP\>**
+- => **<EXP\> <OP_LÓGICO> <EXP\>**
 
 **<EXP'>**
-=> **<OP_ADITIVIO> <EXP\>**
+
+- => **<OP_ADITIVIO> <EXP\>**
 
 **<EXP\>**
-=> **<TÉRMINO> <EXP'>**
+
+- => **<TÉRMINO> <EXP'>**
 
 **<TÉRMINO'>**
-=> **<OP_MULTIPLICATIVO> <TÉRMINO>**
+
+- => **<OP_MULTIPLICATIVO> <TÉRMINO>**
 
 **<TÉRMINO>**
-=> **<FACTOR\> <TÉRMINO'>**
+
+- => **<FACTOR\> <TÉRMINO'>**
 
 **<FACTOR\>**
-=> ( **<EXPRESIÓN>** )
-=> **<OP_ADITIVO>** id
-=> **<OP_ADITIVO> <CTE\>**
-=> id
-=> **<CTE\>**
+
+- => ( **<EXPRESIÓN>** )
+- => **<OP_ADITIVO>** id
+- => **<OP_ADITIVO> <CTE\>**
+- => id
+- => **<CTE\>**
 
 **<ASSIGN\>**
-=> id = **<EXPRESIÓN>** ;
+
+- => id = **<EXPRESIÓN>** ;
 
 **<CYCLE\>**
-=> while ( **<EXPRESIÓN>** ) do **<BODY\>**;
+
+- => while ( **<EXPRESIÓN>** ) do **<BODY\>**;
 
 **<CONDITION\>**
-=> if ( **<EXPRESIÓN>** ) **<BODY\>** ;
-=> if ( **<EXPRESIÓN>** ) else **<BODY\>** ;
+
+- => if ( **<EXPRESIÓN>** ) **<BODY\>** ;
+- => if ( **<EXPRESIÓN>** ) else **<BODY\>** ;
 
 **<F_CALL'>**
-=> , **<EXPRESIÓN> <F_CALL'>**
-=> ε
+
+- => , **<EXPRESIÓN> <F_CALL'>**
+- => ε
 
 **<F_CALL>**
-=> id ( **<EXPRESIÓN>** ) ;
-=> id ( ) ;
-=> id ( **<EXPRESIÓN> <F_CALL'>** )
+
+- => id ( **<EXPRESIÓN>** ) ;
+- => id ( ) ;
+- => id ( **<EXPRESIÓN> <F_CALL'>** )
 
 **<PRINT''>**
-=> , **<PRINT'>**
-=> ε
+
+- => , **<PRINT'>**
+- => ε
 
 **<PRINT'>**
-=> cte_string
-=> **<EXPRESIÓN>**
-=> **<EXPRESIÓN> <PRINT''>**
+
+- => cte_string
+- => **<EXPRESIÓN>**
+- => **<EXPRESIÓN> <PRINT''>**
 
 **<PRINT\>**
-=> print ( **<PRINT'>** ) ;
+
+- => print ( **<PRINT'>** ) ;
 
 **<STATEMENT\>**
-=> **<ASSIGN\>**
-=> **<CONDITION\>**
-=> **<CYCLE\>**
-=> **<F_CALL>**
-=> **<PRINT\>**
+
+- => **<ASSIGN\>**
+- => **<CONDITION\>**
+- => **<CYCLE\>**
+- => **<F_CALL>**
+- => **<PRINT\>**
 
 **<BODY'>**
-=> ε
-=> **<STATEMENT\>**
-=> **<STATEMENT\> <BODY'>**
+
+- => ε
+- => **<STATEMENT\>**
+- => **<STATEMENT\> <BODY'>**
 
 **<BODY\>**
-=> {}
-=> { **<BODY'>** }
+
+- => {}
+- => { **<BODY'>** }
 
 **<IDENTIFIER'>**
-=> ε
-=> , **<IDENTIFIER\>**
+
+- => ε
+- => , **<IDENTIFIER\>**
 
 **<IDENTIFIER\>**
-=> id **<IDENTIFIER'>**
+
+- => id **<IDENTIFIER'>**
 
 **<VARS'>**
-=> **<IDENTIFIER\>** : **<TYPE\>** ;
-=> **<IDENTIFIER\>** : **<TYPE\>** ; **<VARS'>**
+
+- => **<IDENTIFIER\>** : **<TYPE\>** ;
+- => **<IDENTIFIER\>** : **<TYPE\>** ; **<VARS'>**
 
 **<VARS\>**
-=> var **<VARS'>**
+
+- => var **<VARS'>**
 
 **<PARAM'>**
-=> ε
-=> , id : **<TYPE\>** **<PARAM'>**
+
+- => ε
+- => , id : **<TYPE\>** **<PARAM'>**
 
 **<PARAM\>**
-=> id : **<TYPE\>** **<PARAM'>**
+
+- => id : **<TYPE\>** **<PARAM'>**
 
 **<PARAMS\>**
-=> ε
-=> **<PARAM\>**
+
+- => ε
+- => **<PARAM\>**
 
 **<FUNCS\>**
-=> void id ( **<PARAMS\>** ) { **<VARS\>** **<BODY\>** } ;
-=> void id ( **<PARAMS\>** ) { **<BODY\>** } ;
+
+- => void id ( **<PARAMS\>** ) { **<VARS\>** **<BODY\>** } ;
+- => void id ( **<PARAMS\>** ) { **<BODY\>** } ;
 
 **<VARS_PROGRAM>**
-=> ε
-=> **<VARS\>**
+
+- => ε
+- => **<VARS\>**
 
 **<FUNCS_PROGRAM'>**
-=> ε
-=> **<FUNCS\>** **<FUNCS_PROGRAM>**
+
+- => ε
+- => **<FUNCS\>** **<FUNCS_PROGRAM>**
 
 **<FUNCS_PROGRAM>**
-=> ε
-=> **<FUNCS\>** **<FUNCS_PROGRAM'>**
+
+- => ε
+- => **<FUNCS\>** **<FUNCS_PROGRAM'>**
 
 **<PROGRAM\>**
-=> program id ; **<VARS_PROGRAM>** **<FUNCS_PROGRAM>** main **<BODY\>** end
+
+- => program id ; **<VARS_PROGRAM>** **<FUNCS_PROGRAM>** main **<BODY\>** end
