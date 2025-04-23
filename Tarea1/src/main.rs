@@ -1,7 +1,6 @@
 mod utils;
 use std::collections::HashMap;
-use utils::queue::Queue;
-use utils::stack::Stack;
+use utils::{queue::Queue, stack::Stack};
 
 // Correr cargo run para ver el resultado de la funcion main
 // Alternativamente compilar el archivo main con rustc src/main.rs y correr el ejecutable
