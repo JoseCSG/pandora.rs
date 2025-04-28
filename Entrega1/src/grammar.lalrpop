@@ -1,57 +1,62 @@
+use crate::tokens::{Token, LexicalError};
+
 grammar;
 
+extern {
+  type Location = usize;
+  type Error = LexicalError;
+
+  enum Token {
+    "program" => Token::Program,
+    "main" => Token::Main,
+    "end" => Token::End,
+    "print" => Token::Print,
+    "var" => Token::Var,
+    "void" => Token::Void,
+    "while" => Token::While,
+    "do" => Token::Do,
+    "if" => Token::If,
+    "else" => Token::Else,
+    "id" => Token::Id,
+    "intType" => Token::IntDatatype,
+    "floatType" => Token::FloatDatatype,
+    "number" => Token::Number,
+    "float" => Token::Float,
+    "string" => Token::String,
+    "+" => Token::OpAdd,
+    "-" => Token::OpSub,
+    "*" => Token::OpMul,
+    "/" => Token::OpDiv,
+    ">" => Token::Gt,
+    "<" => Token::Lt,
+    "!=" => Token::Ne,
+    "=" => Token::Eq,
+    ";" => Token::Semicolon,
+    "," => Token::Comma,
+    "(" => Token::LParen,
+    ")" => Token::RParen,
+    "{" => Token::LBrace,
+    "}" => Token::RBrace,
+    "[" => Token::LBracket,
+    "]" => Token::RBracket,
+    "." => Token::Dot,
+  }
+}
+
 pub Expr: String = {
-    <l:Expr> "+" <r:Factor> => format!("({} + {})", l, r),
-    <l:Expr> "-" <r:Factor> => format!("({} - {})", l, r),
+    <l:Expr> "+" <r:Factor> => "Operacion suma".to_string(),
+    <l:Expr> "-" <r:Factor> => format!("{} - {}",l, r),
     Factor,
 };
 
 Factor: String = {
-    <l:Factor> "*" <r:Term> => format!("({} * {})", l, r),
-    <l:Factor> "/" <r:Term> => format!("({} / {})", l, r),
+    <l:Factor> "*" <r:Term> =>  format!("{} * {}",l, r),
+    <l:Factor> "/" <r:Term> =>  format!("{} / {}",l, r),
     Term,
 };
 
-pub Term: String = {
-    Keyword,
-    Id,
-    Float,
-    Num,
-    "(" <e:Expr> ")" => format!("({})", e),
+Term: String = {
+    "(" <Expr> ")",
+    <name: "id"> => name.to_string(),
+    <val: "number"> => val.to_string(),
 };
-
-Num: String = {
-    r"-[0-9]+" => "Negative Number".to_string(),
-    r"[0-9]+" => "Number".to_string(),
-};
-
-Float: String = {
-    r"-[0-9]+\.[0-9]+" => "Negative Float Number".to_string(),
-    r"[0-9]+\.[0-9]+" => "Float Number".to_string(),
-}
-
-Keyword: String = {
-    "program" => "Keyword program".to_string(),
-    "main" => "Keyword main".to_string(),
-    "end" => "Keyword end".to_string(),
-    "var" => "Keyword var".to_string(),
-    "int" => "Keyword int".to_string(),
-    "float" => "Keyword float".to_string(),
-    "void" => "Keyword void".to_string(),
-    "print" => "Keyword print".to_string(),
-    "while" => "Keyword while".to_string(),
-    "do" => "Keyword do".to_string(),
-    "if" => "Keyword if".to_string(),
-    "else" => "Keyword else".to_string(),
-};
-
-
-Datatype: String = {
-    r"int" => "Datatype Int".to_string(),
-    r"float" => "Datatype Float".to_string(),
-}
-
-Id: String = {
-    r"[a-zA-Z_][a-zA-Z0-9_]*" => "ID".to_string()
-}
-
