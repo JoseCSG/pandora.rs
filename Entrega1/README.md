@@ -167,7 +167,7 @@
 **<FUNCS\>**
 
 - => void id ( **<PARAMS\>** ) { **<VARS\>** **<BODY\>** } ;
-- => void id ( **<PARAMS\>** ) { **<BODY\>** } ;
+- => void id ( **<PARAMS\>** ) **<BODY\>** ;
 
 **<VARS_PROGRAM>**
 

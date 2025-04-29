@@ -31,6 +31,7 @@ extern {
     "<" => Token::Lt,
     "!=" => Token::Ne,
     "=" => Token::Eq,
+    ":" => Token::Colon,
     ";" => Token::Semicolon,
     "," => Token::Comma,
     "(" => Token::LParen,
@@ -43,20 +44,145 @@ extern {
   }
 }
 
-pub Expr: String = {
-    <l:Expr> "+" <r:Factor> => "Operacion suma".to_string(),
-    <l:Expr> "-" <r:Factor> => format!("{} - {}",l, r),
-    Factor,
-};
+Cte: String = {
+  <val: "number"> => "Numero".to_string(),
+  <val: "float"> => "Float".to_string()
+}
+
+CteString: String = {
+  <val: "string"> => val.to_string(),
+}
+
+OpAditivo: String = {
+  <op: "+"> => "+".to_string(),
+  <op: "-"> => "-".to_string(),
+}
+
+OpMultiplicativo: String = {
+  <op: "*"> => "*".to_string(),
+  <op: "/"> => "/".to_string(),
+}
+
+OpLogico: String = {
+  <op: "<"> => "<".to_string(),
+  <op: ">"> => ">".to_string(),
+  <op: "!="> => "!=".to_string(),
+}
+
+pub Expresion: String = {
+  <left: Exp> <rest: ExpresionPrime> => "Expresion".to_string(),
+}
+
+ExpresionPrime: String = {
+  => "".to_string(),
+  <op: OpLogico> <right: Expresion> => "Expresion logica".to_string(),
+}
+
+
+Exp: String = {
+  <left: Exp> <op: OpAditivo> <right: Termino> => "Exp aditivo".to_string(),
+  <term: Termino> => "Exp simple".to_string(),
+}
+
+Termino: String = {
+  <left: Termino> <op: OpMultiplicativo> <right: Factor> => "Termino multiplicativo".to_string(),
+  <factor: Factor> => "Termino simple".to_string(),
+}
 
 Factor: String = {
-    <l:Factor> "*" <r:Term> =>  format!("{} * {}",l, r),
-    <l:Factor> "/" <r:Term> =>  format!("{} / {}",l, r),
-    Term,
-};
+  "(" <Expresion> ")" => "Primer Factor".to_string(),
+  <opAdd: OpAditivo> <val: "id"> => "Factor con id".to_string(),
+  <val: "id"> => "Factor con Id".to_string(),
+  <Cte>,
+}
 
-Term: String = {
-    "(" <Expr> ")",
-    <name: "id"> => name.to_string(),
-    <val: "number"> => val.to_string(),
-};
+Statement: String = {
+  <Assign>,
+  <Condition>,
+  <Cycle>,
+  <Print>,
+  <FCall>,
+}
+
+ExpList: String = {
+  <start: Expresion> "," <rest: ExpList> => format!("{} {}", start, rest),
+  <exp: Expresion> => "Single Expresion".to_string(),
+}
+
+Assign: String = {
+  <id: "id"> "=" <exp: Expresion> ";" => "Assign".to_string(),
+}
+
+
+PrintPrime: String = {
+  CteString,
+  <args: ExpList> => format!("{}", args),
+}
+
+
+pub Print: String = {
+  "print" "(" <PrintPrime> ")" ";"
+}
+
+Cycle: String = {
+  "while" "(" <Expresion> ")" "do"  <Body>  => "Ciclo".to_string(), 
+}
+
+Condition: String = {
+  "if" "(" <exp:Expresion> ")" <body: Body> ("else" <Body>)? => "Condition".to_string(),
+}
+
+FCall: String = {
+  <id: "id"> "(" <args: ExpList> ")" ";" => "FCall".to_string(),
+}
+
+Body: String = {
+ "{" Statement* "}"  => "Body".to_string(),
+}
+
+Type: String = {
+  <val: "intType"> => val.to_string(),
+  <val: "floatType"> => val.to_string(),
+}
+
+IdentifierPrime: String = {
+  => "".to_string(),
+  "," <Identifier> => "Identifier Prime".to_string(),
+}
+
+Identifier: String = {
+  <id: "id"> <id_prime: IdentifierPrime> => id.to_string(),
+}
+
+VarsPrime: String = {
+  <Identifier>,
+  <id: Identifier> <colon: ":"> <val:Type> <semicolon: ";"> => "Type var".to_string(),
+}
+
+pub Vars: String = {
+  "var" <VarsPrime> => "Vars".to_string(),
+}
+
+Param: String = {
+  <id: "id"> ":" <val: Type> => "Param".to_string(),
+}
+
+Params: String = {
+  Param ("," Param)* => "Params".to_string(),
+}
+
+pub Funcs: String = {
+  "void" <id: "id"> "(" <params: Params> ")" "[" <vars: Vars*> <body:Body> "]" => "Funcion".to_string(),
+}
+
+pub VarsProgram: String = {
+  Vars* => "Vars Program".to_string(),
+}
+
+pub FuncsProgram: String = {
+  Funcs* => "Funciones del programa".to_string(),
+}
+
+pub Program: String = {
+  "program" <id: "id"> ";" <vars: VarsProgram> <funcs: FuncsProgram> <main:"main"> <body: Body>  <end: "end"> => "Programa".to_string(),
+}
