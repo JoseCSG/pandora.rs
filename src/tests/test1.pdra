@@ -1,0 +1,14 @@
+program test_one;
+    void suerte(a: int)[
+        var test, algo :float;
+        {
+            print(test, algo);
+        }
+    ];
+main {
+    while ( i < 3 ) do {
+        print(i);
+            i = i + 1;
+        }        
+    }
+end

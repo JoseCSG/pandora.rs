@@ -1,6 +1,20 @@
-# Definición del Lenguaje
+# Documentación del lenguaje
 
-## Tokens en el lenguaje y regex
+## Herramientas utilizadas
+
+Para realizar el lexer, opte por utilizar la herramienta Logos, ya que la implementación es sencilla. Sólo se definen las reglas de los tokens en un enum, y con eso ya puede tokenizar un texto. Otra razón por la cual escogi esta herramienta, es por su integración sencilla con la herramienta de mi parser, LALRPOP. Esta herramienta tiene documentación de cómo utilizarla con otros crates de rust, además de cómo funciona por si sola la herramienta. LALRPOP ofrece un lexer, sin embargo, me pareció más sencillo de utilizar el de Logos. LALRPOP es parser bottom to top, y utiliza un lenguaje LR (Left to Right), permite usar signos de expresiones regulares, como \*, +, ?, para simplificar ciertas reglas gramaticales, y evitar ambigüedades. Además ofrece una manera de especificar precedencia y asociatividad usando macros de rust.
+
+El parser detecta si un programa esta escrito correctamente, de lo contrario marca error. Escribi cinco pruebas.
+
+1. Es un programa sencillo donde se define una funcion antes del main, y se hace un while con un print adentro.
+2. Escribimos un while antes del main, esto por nuestras reglas no esta permitido, y no es aceptado como un programa valido.
+3. Define dos funciones con parametros antes del main un while con un print y una asignacion adentro, y una llamada a una funcion con una asignacion afuera del while
+4. Hace falta escribir un identificador acompañando a la palabra reservada program, ademas de tener un "{" de más, creando un programa no valido.
+5. Este programa incluye todo lo que un programa puede tener, declaracion de variables y funciones antes del main, dentro del main, condiciones, while, print, asignaciones, y llamada a funciones. Como tiene un orden correcto, genera un programa valido.
+
+## Definición del Lenguaje
+
+### Tokens en el lenguaje y regex
 
 - **Identificación**
   - id: [a-zA-Z\_][a-zA-Z0-9_]\*
@@ -17,7 +31,7 @@
 - **Tipo de dato**
   - int, float
 
-## Reglas Gramaticales
+### Reglas Gramaticales
 
 **<CTE\>**
 

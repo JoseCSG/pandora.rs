@@ -69,15 +69,14 @@ OpLogico: String = {
   <op: "!="> => "!=".to_string(),
 }
 
-pub Expresion: String = {
-  <left: Exp> <rest: ExpresionPrime> => "Expresion".to_string(),
+Expresion: String = {
+  <left: Exp> <rest: ExpresionPrima> => format!("{} Expresion {}", left, rest),
 }
 
-ExpresionPrime: String = {
+ExpresionPrima: String = {
   => "".to_string(),
   <op: OpLogico> <right: Expresion> => "Expresion logica".to_string(),
 }
-
 
 Exp: String = {
   <left: Exp> <op: OpAditivo> <right: Termino> => "Exp aditivo".to_string(),
@@ -106,21 +105,19 @@ Statement: String = {
 
 ExpList: String = {
   <start: Expresion> "," <rest: ExpList> => format!("{} {}", start, rest),
-  <exp: Expresion> => "Single Expresion".to_string(),
+  Expresion => "Single Expresion".to_string(),
 }
 
 Assign: String = {
   <id: "id"> "=" <exp: Expresion> ";" => "Assign".to_string(),
 }
 
-
 PrintPrime: String = {
   CteString,
   <args: ExpList> => format!("{}", args),
 }
 
-
-pub Print: String = {
+Print: String = {
   "print" "(" <PrintPrime> ")" ";"
 }
 
@@ -151,7 +148,7 @@ IdentifierPrime: String = {
 }
 
 Identifier: String = {
-  <id: "id"> <id_prime: IdentifierPrime> => id.to_string(),
+  <id: "id"> <id_prime: IdentifierPrime> => id.to_string() + &id_prime,
 }
 
 VarsPrime: String = {
@@ -159,8 +156,8 @@ VarsPrime: String = {
   <id: Identifier> <colon: ":"> <val:Type> <semicolon: ";"> => "Type var".to_string(),
 }
 
-pub Vars: String = {
-  "var" <VarsPrime> => "Vars".to_string(),
+Vars: String = {
+  "var" <VarsPrime+> => "Vars".to_string(),
 }
 
 Param: String = {
@@ -171,18 +168,18 @@ Params: String = {
   Param ("," Param)* => "Params".to_string(),
 }
 
-pub Funcs: String = {
-  "void" <id: "id"> "(" <params: Params> ")" "[" <vars: Vars*> <body:Body> "]" => "Funcion".to_string(),
+Funcs: String = {
+  "void" <id: "id"> "(" <params: Params> ")" "[" <vars: Vars*> <body:Body> "]" ";" => "Funcion".to_string(),
 }
 
-pub VarsProgram: String = {
+VarsProgram: String = {
   Vars* => "Vars Program".to_string(),
 }
 
-pub FuncsProgram: String = {
+FuncsProgram: String = {
   Funcs* => "Funciones del programa".to_string(),
 }
 
 pub Program: String = {
-  "program" <id: "id"> ";" <vars: VarsProgram> <funcs: FuncsProgram> <main:"main"> <body: Body>  <end: "end"> => "Programa".to_string(),
+  "program" <id: "id"> ";" <vars: VarsProgram> <funcs: FuncsProgram> <main:"main"> <body: Body>  <end: "end"> => format!("Programa Valido"),
 }

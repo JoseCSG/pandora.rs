@@ -1,0 +1,24 @@
+program test_three;
+    void suerte(a: int)[
+        var test, algo :float;
+        {
+            print(test, algo);
+        }
+    ];
+    void test(a: int, b:float, c:int)[
+        if (a != b) {
+            print("No es igual);
+        } else {
+            print("es igual);
+        }
+    ];
+main {
+    while ( i < 3 ) do {
+        print(i);
+        i = i + 1;
+    }  
+
+    test(3,2,1);
+    i = 22;   
+}
+end
