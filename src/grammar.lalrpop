@@ -1,6 +1,7 @@
 use crate::tokens::{Token, LexicalError};
+use crate::semantic_cube;
 
-grammar;
+grammar<'input>(cubo: &'input semantic_cube::CuboSemantico);
 
 extern {
   type Location = usize;
@@ -42,57 +43,72 @@ extern {
     "]" => Token::RBracket,
     "." => Token::Dot,
   }
+
 }
 
-Cte: String = {
-  <val: "number"> => "Numero".to_string(),
-  <val: "float"> => "Float".to_string()
+Cte: semantic_cube::Type = {
+  <val: "number"> => semantic_cube::Type::Int,
+  <val: "float"> => semantic_cube::Type::Float,
 }
 
 CteString: String = {
   <val: "string"> => val.to_string(),
 }
 
-OpAditivo: String = {
-  <op: "+"> => "+".to_string(),
-  <op: "-"> => "-".to_string(),
+OpAditivo: semantic_cube::Operator = {
+  <op: "+"> => semantic_cube::Operator::Add,
+  <op: "-"> => semantic_cube::Operator::Subtract,
 }
 
-OpMultiplicativo: String = {
-  <op: "*"> => "*".to_string(),
-  <op: "/"> => "/".to_string(),
+OpMultiplicativo: semantic_cube::Operator = {
+  <op: "*"> => semantic_cube::Operator::Multiply,
+  <op: "/"> => semantic_cube::Operator::Divide,
 }
 
-OpLogico: String = {
-  <op: "<"> => "<".to_string(),
-  <op: ">"> => ">".to_string(),
-  <op: "!="> => "!=".to_string(),
+OpLogico: semantic_cube::Operator = {
+  <op: "<"> => semantic_cube::Operator::LessThan,
+  <op: ">"> => semantic_cube::Operator::GreaterThan,
+  <op: "!="> => semantic_cube::Operator::NotEqual,
 }
 
-Expresion: String = {
-  <left: Exp> <rest: ExpresionPrima> => format!("{} Expresion {}", left, rest),
+pub Expresion: semantic_cube::Type = {
+  <left: Exp> <rest: ExpresionTail> => {
+    rest.into_iter().fold(left, |acc, (op, right)| {
+      cubo.get_type(acc, op, right)
+    })
+  },
+};
+
+ExpresionTail: Vec<(semantic_cube::Operator, semantic_cube::Type)> = {
+  <rest: (<OpLogico> <Exp>)*> =>  rest,
+};
+
+Exp: semantic_cube::Type = {
+  <left: Exp> <op: OpAditivo> <right: Termino> => {
+    cubo.get_type(left, op, right)
+  },
+  <term: Termino> => term,
 }
 
-ExpresionPrima: String = {
-  => "".to_string(),
-  <op: OpLogico> <right: Expresion> => "Expresion logica".to_string(),
+Termino: semantic_cube::Type = {
+  <left: Termino> <op: OpMultiplicativo> <right: Factor> => {
+    cubo.get_type(left, op, right)
+  },
+  <factor: Factor> => factor
 }
 
-Exp: String = {
-  <left: Exp> <op: OpAditivo> <right: Termino> => "Exp aditivo".to_string(),
-  <term: Termino> => "Exp simple".to_string(),
-}
-
-Termino: String = {
-  <left: Termino> <op: OpMultiplicativo> <right: Factor> => "Termino multiplicativo".to_string(),
-  <factor: Factor> => "Termino simple".to_string(),
-}
-
-Factor: String = {
-  "(" <Expresion> ")" => "Primer Factor".to_string(),
-  <opAdd: OpAditivo> <val: "id"> => "Factor con id".to_string(),
-  <val: "id"> => "Factor con Id".to_string(),
-  <Cte>,
+Factor: semantic_cube::Type = {
+  "(" <exp: Expresion> ")" => exp,
+  <opAdd: OpAditivo> <val: "id"> => {
+    // Implement later with variable table
+    semantic_cube::Type::Int
+  
+  },
+  <val:"id"> => {
+    // Implement later with variable table
+    semantic_cube::Type::Int
+  },
+  Cte,
 }
 
 Statement: String = {
@@ -104,7 +120,9 @@ Statement: String = {
 }
 
 ExpList: String = {
-  <start: Expresion> "," <rest: ExpList> => format!("{} {}", start, rest),
+  <start: Expresion> "," <rest: ExpList> => {
+    rest
+  },
   Expresion => "Single Expresion".to_string(),
 }
 

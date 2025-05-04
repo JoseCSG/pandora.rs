@@ -1,6 +1,8 @@
 mod lexer;
+mod semantic_cube;
 mod tokens;
-use grammar::ProgramParser;
+
+use grammar::ExpresionParser;
 use lalrpop_util::lalrpop_mod;
 use lexer::Lexer;
 
@@ -67,10 +69,14 @@ fn test_five() {
 }
 
 fn main() {
-    let mut source = std::fs::read_to_string("src/tests/test5.pdra").expect("Unable to read file");
+    let mut source =
+        std::fs::read_to_string("src/tests/expressionTest.pdra").expect("Unable to read file");
     source = normalize(&source);
     let lexer = Lexer::new(&source);
-    let parser = ProgramParser::new();
-    let result = parser.parse(lexer);
-    print!("{}", result.unwrap());
+    let parser = ExpresionParser::new();
+    let result2 = Lexer::lex(source.as_str());
+    println!("{:?}", result2);
+    let cubo = semantic_cube::CuboSemantico::new();
+    let result = parser.parse(&cubo, lexer);
+    print!("{:?}", result.unwrap());
 }
