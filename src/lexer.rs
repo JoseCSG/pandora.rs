@@ -24,6 +24,7 @@ impl<'input> Lexer<'input> {
                 result.push('\n');
             }
         }
+        println!("{}", result);
         return result;
     }
 }

@@ -1,10 +1,14 @@
 program test_one;
-    void suerte(a: int)[
-        var test, algo :float;
+    var a, b :int;
+        e :float;
+    void suerte(a: int, ex: float)[
+        var algo :float;
+            test2, algo2 :int;
         {
             print(test, algo);
         }
     ];
+
 main {
     while ( i < 3 ) do {
         print(i);

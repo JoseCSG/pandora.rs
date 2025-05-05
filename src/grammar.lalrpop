@@ -1,7 +1,10 @@
 use crate::tokens::{Token, LexicalError};
 use crate::semantic_cube;
+use crate::semantic_tables;
+use std::collections::HashMap;
 
-grammar<'input>(cubo: &'input semantic_cube::CuboSemantico);
+grammar<'input>(cubo: &'input semantic_cube::CuboSemantico, 
+          tabla_funciones: &'input mut semantic_tables::FunctionTable);
 
 extern {
   type Location = usize;
@@ -18,7 +21,7 @@ extern {
     "do" => Token::Do,
     "if" => Token::If,
     "else" => Token::Else,
-    "id" => Token::Id,
+    "id" => Token::Id(_String),
     "intType" => Token::IntDatatype,
     "floatType" => Token::FloatDatatype,
     "number" => Token::Number,
@@ -71,11 +74,14 @@ OpLogico: semantic_cube::Operator = {
   <op: "!="> => semantic_cube::Operator::NotEqual,
 }
 
-pub Expresion: semantic_cube::Type = {
+//TODO: Build AST to return value
+pub Expresion: (semantic_cube::Type, semantic_tables::VarValue) = {
   <left: Exp> <rest: ExpresionTail> => {
-    rest.into_iter().fold(left, |acc, (op, right)| {
+    let exp_type = rest.into_iter().fold(left, |acc, (op, right)| {
       cubo.get_type(acc, op, right)
-    })
+    });
+    let value = semantic_tables::VarValue::Int(0);
+    (exp_type, value)
   },
 };
 
@@ -98,14 +104,15 @@ Termino: semantic_cube::Type = {
 }
 
 Factor: semantic_cube::Type = {
-  "(" <exp: Expresion> ")" => exp,
-  <opAdd: OpAditivo> <val: "id"> => {
+  "(" <exp: Expresion> ")" => exp.0,
+  <op_add: OpAditivo> <val: Id> => {
     // Implement later with variable table
     semantic_cube::Type::Int
   
   },
-  <val:"id"> => {
+  <val: Id> => {
     // Implement later with variable table
+    // Need to figure out where to check the current scope
     semantic_cube::Type::Int
   },
   Cte,
@@ -119,24 +126,24 @@ Statement: String = {
   <FCall>,
 }
 
-ExpList: String = {
+ExpList: Vec<String> = {
   <start: Expresion> "," <rest: ExpList> => {
     rest
   },
-  Expresion => "Single Expresion".to_string(),
+  Expresion => vec!["Single Expresion".to_string()],
 }
 
 Assign: String = {
-  <id: "id"> "=" <exp: Expresion> ";" => "Assign".to_string(),
+  <id: Id> "=" <exp: Expresion> ";" => "Assign".to_string(),
 }
 
-PrintPrime: String = {
-  CteString,
-  <args: ExpList> => format!("{}", args),
+PrintPrime: Vec<String> = {
+  CteString => vec!["CteString".to_string()],
+  <args: ExpList> => args,
 }
 
 Print: String = {
-  "print" "(" <PrintPrime> ")" ";"
+  "print" "(" <PrintPrime> ")" ";" => "Print".to_string(),
 }
 
 Cycle: String = {
@@ -148,56 +155,146 @@ Condition: String = {
 }
 
 FCall: String = {
-  <id: "id"> "(" <args: ExpList> ")" ";" => "FCall".to_string(),
+  <id: Id> "(" <args: ExpList> ")" ";" => "FCall".to_string(),
 }
 
 Body: String = {
  "{" Statement* "}"  => "Body".to_string(),
 }
 
-Type: String = {
-  <val: "intType"> => val.to_string(),
-  <val: "floatType"> => val.to_string(),
+Type: semantic_cube::Type = {
+  <val: "intType"> => semantic_cube::Type::Int,
+  <val: "floatType"> => semantic_cube::Type::Float,
 }
 
-IdentifierPrime: String = {
-  => "".to_string(),
-  "," <Identifier> => "Identifier Prime".to_string(),
+Id: String = {
+  <val: "id"> => {
+    match val {
+        Token::Id(ref name) => name.clone(),
+        _ => panic!("Invalid identifier"),
+      }
+  },
 }
 
-Identifier: String = {
-  <id: "id"> <id_prime: IdentifierPrime> => id.to_string() + &id_prime,
+// Modified to return a vector of identifiers
+Identifier: Vec<String> = {
+    <first: Id> <rest: ("," <Id>)*> => {
+        let mut ids = vec![first];
+        for id in rest {
+            ids.push(id);
+        }
+        ids
+    },
+};
+
+VarsPrime: Vec<semantic_tables::VariableInfo> = {
+  <ids: Identifier> <colon: ":"> <val:Type> <semicolon: ";"> => {
+    let mut variables_info = vec![];
+    for id in ids {
+      let id_value = id.clone();
+
+      let _var_type: semantic_tables::VarType = match val {
+        semantic_cube::Type::Int => semantic_tables::VarType::Int,
+        semantic_cube::Type::Float => semantic_tables::VarType::Float,
+        _ => panic!("Invalid type"),
+      };
+      let var_info: semantic_tables::VariableInfo = semantic_tables::VariableInfo 
+        { value: match _var_type {
+          semantic_tables::VarType::Int => semantic_tables::VarValue::Int(0),
+          semantic_tables::VarType::Float => semantic_tables::VarValue::Float(0.0),
+        }, var_type: _var_type, name: id_value.clone()  };
+      
+      variables_info.push(var_info);
+    }   
+    variables_info
+  },    
 }
 
-VarsPrime: String = {
-  <Identifier>,
-  <id: Identifier> <colon: ":"> <val:Type> <semicolon: ";"> => "Type var".to_string(),
+Vars: Vec<Vec<semantic_tables::VariableInfo>> = {
+  "var" <vars:VarsPrime+> => vars,
 }
 
-Vars: String = {
-  "var" <VarsPrime+> => "Vars".to_string(),
+Param: semantic_tables::FunctionParam = {
+  <id: Id> ":" <val: Type> => {
+    let _var_type: semantic_tables::VarType = match val {
+      semantic_cube::Type::Int => semantic_tables::VarType::Int,
+      semantic_cube::Type::Float => semantic_tables::VarType::Float,
+      _ => panic!("Invalid type"),
+    };
+    semantic_tables::FunctionParam { var_type: _var_type, name: id.clone() }
+  },
 }
 
-Param: String = {
-  <id: "id"> ":" <val: Type> => "Param".to_string(),
+Params: Vec<semantic_tables::FunctionParam> = {
+  <first: Param> <rest: ("," <Param>)*> => {
+    let mut param_vector = vec![first];
+    for param in rest {
+      param_vector.push(param);
+    }
+    param_vector
+  },
 }
 
-Params: String = {
-  Param ("," Param)* => "Params".to_string(),
+FunctionId: String = {
+  <id: Id> => {
+    if tabla_funciones.contains_key(&id) {
+      panic!("Function Id: {} already registered", id);
+    }
+    id
+  }
 }
 
-Funcs: String = {
-  "void" <id: "id"> "(" <params: Params> ")" "[" <vars: Vars*> <body:Body> "]" ";" => "Funcion".to_string(),
+//TODO: Create analogic points to create the function into the function_table, 
+// then add the params, and vars to the var_table of the function 
+Funcs: () = {
+  "void" <id: FunctionId> "(" <_params: Params> ")" "[" <vars: Vars?> <body:Body> "]" ";" => {
+    let mut temp_tabla_vars: HashMap<String, semantic_tables::VariableInfo> = HashMap::new();
+    for param in &_params {
+      if temp_tabla_vars.contains_key(&param.name) {
+        panic!("Variable {} is already declared in the params of the function {}", param.name, id.to_string());
+      }
+
+      let var_info: semantic_tables::VariableInfo = semantic_tables::VariableInfo 
+        { value: match param.var_type {
+          semantic_tables::VarType::Int => semantic_tables::VarValue::Int(0),
+          semantic_tables::VarType::Float => semantic_tables::VarValue::Float(0.0),
+        }, var_type: param.var_type.clone(), name: param.name.clone()  };
+        temp_tabla_vars.insert(param.name.clone(), var_info);
+    }
+    
+    for var in vars.unwrap_or(vec![]) {
+      for var_info in var {
+        if tabla_funciones.get("main").unwrap().vars.contains_key(&var_info.name){
+          panic!("Variable {} in function {} is already declared as global", var_info.name, id.to_string());
+        }
+
+        if temp_tabla_vars.contains_key(&var_info.name) {
+          panic!("Variable {} is already declared either in the params or in the function", var_info.name);
+        }
+
+        temp_tabla_vars.insert(var_info.name.clone(), var_info.clone());
+      }
+    }
+    tabla_funciones.insert(id.to_string(), semantic_tables::FunctionInfo { name: id.to_string(), params: _params, vars: temp_tabla_vars });
+  },
 }
 
-VarsProgram: String = {
-  Vars* => "Vars Program".to_string(),
-}
+VarsProgram: () = {
+  <vars: Vars?> => {
+    let mut temp_tabla_vars: HashMap<String, semantic_tables::VariableInfo> = HashMap::new();
+    for var in vars.unwrap_or(vec![]) {
+      for var_info in var {
+        if temp_tabla_vars.contains_key(&var_info.name){
+          panic!("Global variable {} is already declared", var_info.name);
+        }
+        temp_tabla_vars.insert(var_info.name.clone(), var_info.clone());
+      }
+    }
 
-FuncsProgram: String = {
-  Funcs* => "Funciones del programa".to_string(),
+    tabla_funciones.insert("main".to_string(), semantic_tables::FunctionInfo { name: "main".to_string(), params: vec![], vars: temp_tabla_vars.clone() });
+  },
 }
 
 pub Program: String = {
-  "program" <id: "id"> ";" <vars: VarsProgram> <funcs: FuncsProgram> <main:"main"> <body: Body>  <end: "end"> => format!("Programa Valido"),
+  "program" <id: Id> ";" <vars: VarsProgram> <funcs: Funcs*> <main:"main"> <body: Body>  <end: "end"> => format!("Program exit with value {}", 0),
 }

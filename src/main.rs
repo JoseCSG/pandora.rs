@@ -1,10 +1,15 @@
+#![allow(warnings)]
+
 mod lexer;
 mod semantic_cube;
+mod semantic_tables;
 mod tokens;
 
-use grammar::ExpresionParser;
+use grammar::ProgramParser;
 use lalrpop_util::lalrpop_mod;
 use lexer::Lexer;
+use semantic_tables::FunctionTable;
+use std::collections::HashMap;
 
 lalrpop_mod!(pub grammar);
 
@@ -69,14 +74,14 @@ fn test_five() {
 }
 
 fn main() {
-    let mut source =
-        std::fs::read_to_string("src/tests/expressionTest.pdra").expect("Unable to read file");
+    let mut source = std::fs::read_to_string("src/tests/test1.pdra").expect("Unable to read file");
     source = normalize(&source);
     let lexer = Lexer::new(&source);
-    let parser = ExpresionParser::new();
-    let result2 = Lexer::lex(source.as_str());
-    println!("{:?}", result2);
+    let parser = ProgramParser::new();
+
     let cubo = semantic_cube::CuboSemantico::new();
-    let result = parser.parse(&cubo, lexer);
+    let mut function_table: FunctionTable = HashMap::new();
+
+    let result = parser.parse(&cubo, &mut function_table, lexer);
     print!("{:?}", result.unwrap());
 }
