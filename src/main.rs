@@ -4,12 +4,14 @@ mod lexer;
 mod semantic_cube;
 mod semantic_tables;
 mod tokens;
+mod utils;
 
 use grammar::ProgramParser;
 use lalrpop_util::lalrpop_mod;
 use lexer::Lexer;
 use semantic_tables::FunctionTable;
 use std::collections::HashMap;
+use utils::stack::Stack;
 
 lalrpop_mod!(pub grammar);
 
@@ -17,71 +19,16 @@ fn normalize(s: &str) -> String {
     s.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
-#[test]
-fn test_one() {
-    let mut source = std::fs::read_to_string("src/tests/test1.pdra").expect("Unable to read file");
-    source = normalize(&source);
-    let lexer = Lexer::new(&source);
-    let parser = ProgramParser::new();
-    let result = parser.parse(lexer);
-
-    assert_eq!(result.is_ok(), true);
-    assert_eq!(result.unwrap(), "Programa Valido");
-}
-
-#[test]
-fn test_two() {
-    let mut source = std::fs::read_to_string("src/tests/test2.pdra").expect("Unable to read file");
-    source = normalize(&source);
-    let lexer = Lexer::new(&source);
-    let parser = ProgramParser::new();
-    let result = parser.parse(lexer);
-
-    assert_eq!(result.is_err(), true);
-}
-
-#[test]
-fn test_three() {
-    let mut source = std::fs::read_to_string("src/tests/test3.pdra").expect("Unable to read file");
-    source = normalize(&source);
-    let lexer = Lexer::new(&source);
-    let parser = ProgramParser::new();
-    let result = parser.parse(lexer);
-
-    assert_eq!(result.is_err(), false);
-}
-
-#[test]
-fn test_four() {
-    let mut source = std::fs::read_to_string("src/tests/test4.pdra").expect("Unable to read file");
-    source = normalize(&source);
-    let lexer = Lexer::new(&source);
-    let parser = ProgramParser::new();
-    let result = parser.parse(lexer);
-
-    assert_eq!(result.is_err(), true);
-}
-
-#[test]
-fn test_five() {
-    let mut source = std::fs::read_to_string("src/tests/test5.pdra").expect("Unable to read file");
-    source = normalize(&source);
-    let lexer = Lexer::new(&source);
-    let parser = ProgramParser::new();
-    let result = parser.parse(lexer);
-
-    assert_eq!(result.is_ok(), true);
-}
-
 fn main() {
-    let mut source = std::fs::read_to_string("src/tests/test1.pdra").expect("Unable to read file");
+    let mut source = std::fs::read_to_string("tests/test3.pdra").expect("Unable to read file");
     source = normalize(&source);
     let lexer = Lexer::new(&source);
     let parser = ProgramParser::new();
 
+    let mut scope_stack: Stack<String> = Stack::new();
     let cubo = semantic_cube::CuboSemantico::new();
     let mut function_table: FunctionTable = HashMap::new();
 
-    let result = parser.parse(&cubo, &mut function_table, lexer);
+    let result = parser.parse(&cubo, &mut function_table, &mut scope_stack, lexer);
     print!("{:?}", result.unwrap());
 }

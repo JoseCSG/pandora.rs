@@ -1,10 +1,14 @@
+use crate::utils::stack::Stack;
 use crate::tokens::{Token, LexicalError};
 use crate::semantic_cube;
 use crate::semantic_tables;
 use std::collections::HashMap;
 
+
 grammar<'input>(cubo: &'input semantic_cube::CuboSemantico, 
-          tabla_funciones: &'input mut semantic_tables::FunctionTable);
+          tabla_funciones: &'input mut semantic_tables::FunctionTable,
+          scope_stack: &'input mut Stack<String>
+          );
 
 extern {
   type Location = usize;
@@ -111,6 +115,7 @@ Factor: semantic_cube::Type = {
   
   },
   <val: Id> => {
+    //TODO: Implement this
     // Implement later with variable table
     // Need to figure out where to check the current scope
     semantic_cube::Type::Int
@@ -119,26 +124,30 @@ Factor: semantic_cube::Type = {
 }
 
 Statement: String = {
-  <Assign>,
+  <Assign> => "Assign".to_string(),
   <Condition>,
   <Cycle>,
   <Print>,
   <FCall>,
 }
 
-ExpList: Vec<String> = {
-  <start: Expresion> "," <rest: ExpList> => {
+ExpList: Vec<(semantic_cube::Type, semantic_tables::VarValue)> = {
+  <start: Expresion> <rest: ("," <Expresion>)*> => {
     rest
+  }
+}
+
+Assign: () = {
+  <id: Id> "=" <exp: Expresion> ";" => {
+
   },
-  Expresion => vec!["Single Expresion".to_string()],
 }
 
-Assign: String = {
-  <id: Id> "=" <exp: Expresion> ";" => "Assign".to_string(),
-}
-
-PrintPrime: Vec<String> = {
-  CteString => vec!["CteString".to_string()],
+PrintPrime: Vec<(semantic_cube::Type, semantic_tables::VarValue)> = {
+  CteString => {
+    vec!["CteString".to_string()];
+    vec![(semantic_cube::Type::Int, semantic_tables::VarValue::Int(0))]
+  },
   <args: ExpList> => args,
 }
 
@@ -248,6 +257,7 @@ FunctionId: String = {
 // then add the params, and vars to the var_table of the function 
 Funcs: () = {
   "void" <id: FunctionId> "(" <_params: Params> ")" "[" <vars: Vars?> <body:Body> "]" ";" => {
+    scope_stack.push(id.to_string());
     let mut temp_tabla_vars: HashMap<String, semantic_tables::VariableInfo> = HashMap::new();
     for param in &_params {
       if temp_tabla_vars.contains_key(&param.name) {
@@ -281,6 +291,7 @@ Funcs: () = {
 
 VarsProgram: () = {
   <vars: Vars?> => {
+    scope_stack.push("main".to_string());
     let mut temp_tabla_vars: HashMap<String, semantic_tables::VariableInfo> = HashMap::new();
     for var in vars.unwrap_or(vec![]) {
       for var_info in var {
@@ -296,5 +307,5 @@ VarsProgram: () = {
 }
 
 pub Program: String = {
-  "program" <id: Id> ";" <vars: VarsProgram> <funcs: Funcs*> <main:"main"> <body: Body>  <end: "end"> => format!("Program exit with value {}", 0),
+  "program" <id: Id> ";" <vars: VarsProgram> <funcs: Funcs*> <st_main: "main">  <body: Body>  <end: "end"> => format!("Program exit with value {}", 0),
 }

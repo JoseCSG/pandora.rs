@@ -76,6 +76,26 @@ impl CuboSemantico {
         res_operaciones.insert((Type::Int, Operator::NotEqual, Type::Float), Type::Bool);
         res_operaciones.insert((Type::Float, Operator::NotEqual, Type::Int), Type::Bool);
 
+        res_operaciones.insert((Type::Bool, Operator::Add, Type::Int), Type::Error);
+        res_operaciones.insert((Type::Bool, Operator::Multiply, Type::Int), Type::Error);
+        res_operaciones.insert((Type::Bool, Operator::Subtract, Type::Int), Type::Error);
+        res_operaciones.insert((Type::Bool, Operator::Divide, Type::Int), Type::Error);
+
+        res_operaciones.insert((Type::Bool, Operator::Add, Type::Float), Type::Error);
+        res_operaciones.insert((Type::Bool, Operator::Multiply, Type::Float), Type::Error);
+        res_operaciones.insert((Type::Bool, Operator::Subtract, Type::Float), Type::Error);
+        res_operaciones.insert((Type::Bool, Operator::Divide, Type::Float), Type::Error);
+
+        res_operaciones.insert((Type::Int, Operator::Add, Type::Bool), Type::Error);
+        res_operaciones.insert((Type::Int, Operator::Multiply, Type::Bool), Type::Error);
+        res_operaciones.insert((Type::Int, Operator::Subtract, Type::Bool), Type::Error);
+        res_operaciones.insert((Type::Int, Operator::Divide, Type::Bool), Type::Error);
+
+        res_operaciones.insert((Type::Float, Operator::Add, Type::Bool), Type::Error);
+        res_operaciones.insert((Type::Float, Operator::Multiply, Type::Bool), Type::Error);
+        res_operaciones.insert((Type::Float, Operator::Subtract, Type::Bool), Type::Error);
+        res_operaciones.insert((Type::Float, Operator::Divide, Type::Bool), Type::Error);
+
         Self { res_operaciones }
     }
 

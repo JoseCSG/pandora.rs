@@ -1,5 +1,9 @@
 # Documentación del lenguaje
 
+## Analisis Semantico
+
+En esta entrega se implementaron clases de tablas de variables y funciones, para poder guardar la información de las variables declaradas en una función y globalmente. De igual manera, se implementó un cubo semántico, el cual permite determinar si las operaciones dentro de una operacion son validas o no.
+
 ## Herramientas utilizadas
 
 Para realizar el lexer, opte por utilizar la herramienta Logos, ya que la implementación es sencilla. Sólo se definen las reglas de los tokens en un enum, y con eso ya puede tokenizar un texto. Otra razón por la cual escogi esta herramienta, es por su integración sencilla con la herramienta de mi parser, LALRPOP. Esta herramienta tiene documentación de cómo utilizarla con otros crates de rust, además de cómo funciona por si sola la herramienta. LALRPOP ofrece un lexer, sin embargo, me pareció más sencillo de utilizar el de Logos. LALRPOP es parser bottom to top, y utiliza un lenguaje LR (Left to Right), permite usar signos de expresiones regulares, como \*, +, ?, para simplificar ciertas reglas gramaticales, y evitar ambigüedades. Además ofrece una manera de especificar precedencia y asociatividad usando macros de rust.
