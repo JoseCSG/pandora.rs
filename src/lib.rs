@@ -1,17 +1,15 @@
 extern crate lalrpop_util;
 use lalrpop_util::lalrpop_mod;
 
-pub mod lexer;
-pub mod semantic_cube;
-pub mod semantic_tables;
-pub mod tokens;
+pub mod compiler;
 pub mod utils;
 
 lalrpop_mod!(pub grammar);
 
+pub use compiler::lexer::Lexer;
+pub use compiler::program_manager::ProgramManager;
+pub use compiler::semantic_tables::FunctionTable;
+pub use compiler::tokens::{LexicalError, Token};
 pub use grammar::ProgramParser;
-pub use lexer::Lexer;
-pub use semantic_tables::FunctionTable;
 pub use std::collections::HashMap;
-pub use tokens::{LexicalError, Token};
 pub use utils::stack::Stack;

@@ -1,14 +1,11 @@
-use crate::utils::stack::Stack;
-use crate::tokens::{Token, LexicalError};
-use crate::semantic_cube;
-use crate::semantic_tables;
+use crate::compiler::tokens::{Token, LexicalError};
+use crate::compiler::semantic_cube;
+use crate::compiler::semantic_tables;
 use std::collections::HashMap;
+use crate::compiler::program_manager::ProgramManager;
 
 
-grammar<'input>(cubo: &'input semantic_cube::CuboSemantico, 
-          tabla_funciones: &'input mut semantic_tables::FunctionTable,
-          scope_stack: &'input mut Stack<String>
-          );
+grammar<'input>(program_manager: &'input mut ProgramManager);
 
 extern {
   type Location = usize;
@@ -82,7 +79,7 @@ OpLogico: semantic_cube::Operator = {
 pub Expresion: (semantic_cube::Type, semantic_tables::VarValue) = {
   <left: Exp> <rest: ExpresionTail> => {
     let exp_type = rest.into_iter().fold(left, |acc, (op, right)| {
-      cubo.get_type(acc, op, right)
+      program_manager.cubo.get_type(acc, op, right)
     });
     let value = semantic_tables::VarValue::Int(0);
     (exp_type, value)
@@ -95,14 +92,14 @@ ExpresionTail: Vec<(semantic_cube::Operator, semantic_cube::Type)> = {
 
 Exp: semantic_cube::Type = {
   <left: Exp> <op: OpAditivo> <right: Termino> => {
-    cubo.get_type(left, op, right)
+    program_manager.cubo.get_type(left, op, right)
   },
   <term: Termino> => term,
 }
 
 Termino: semantic_cube::Type = {
   <left: Termino> <op: OpMultiplicativo> <right: Factor> => {
-    cubo.get_type(left, op, right)
+    program_manager.cubo.get_type(left, op, right)
   },
   <factor: Factor> => factor
 }
@@ -246,7 +243,7 @@ Params: Vec<semantic_tables::FunctionParam> = {
 
 FunctionId: String = {
   <id: Id> => {
-    if tabla_funciones.contains_key(&id) {
+    if program_manager.tabla_funciones.contains_key(&id) {
       panic!("Function Id: {} already registered", id);
     }
     id
@@ -257,7 +254,7 @@ FunctionId: String = {
 // then add the params, and vars to the var_table of the function 
 Funcs: () = {
   "void" <id: FunctionId> "(" <_params: Params> ")" "[" <vars: Vars?> <body:Body> "]" ";" => {
-    scope_stack.push(id.to_string());
+    program_manager.scope_stack.push(id.to_string());
     let mut temp_tabla_vars: HashMap<String, semantic_tables::VariableInfo> = HashMap::new();
     for param in &_params {
       if temp_tabla_vars.contains_key(&param.name) {
@@ -274,7 +271,7 @@ Funcs: () = {
     
     for var in vars.unwrap_or(vec![]) {
       for var_info in var {
-        if tabla_funciones.get("main").unwrap().vars.contains_key(&var_info.name){
+        if program_manager.tabla_funciones.get("main").unwrap().vars.contains_key(&var_info.name){
           panic!("Variable {} in function {} is already declared as global", var_info.name, id.to_string());
         }
 
@@ -285,13 +282,13 @@ Funcs: () = {
         temp_tabla_vars.insert(var_info.name.clone(), var_info.clone());
       }
     }
-    tabla_funciones.insert(id.to_string(), semantic_tables::FunctionInfo { name: id.to_string(), params: _params, vars: temp_tabla_vars });
+    program_manager.tabla_funciones.insert(id.to_string(), semantic_tables::FunctionInfo { name: id.to_string(), params: _params, vars: temp_tabla_vars });
   },
 }
 
 VarsProgram: () = {
   <vars: Vars?> => {
-    scope_stack.push("main".to_string());
+    program_manager.scope_stack.push("main".to_string());
     let mut temp_tabla_vars: HashMap<String, semantic_tables::VariableInfo> = HashMap::new();
     for var in vars.unwrap_or(vec![]) {
       for var_info in var {
@@ -302,7 +299,7 @@ VarsProgram: () = {
       }
     }
 
-    tabla_funciones.insert("main".to_string(), semantic_tables::FunctionInfo { name: "main".to_string(), params: vec![], vars: temp_tabla_vars.clone() });
+    program_manager.tabla_funciones.insert("main".to_string(), semantic_tables::FunctionInfo { name: "main".to_string(), params: vec![], vars: temp_tabla_vars.clone() });
   },
 }
 

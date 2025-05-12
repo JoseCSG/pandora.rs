@@ -1,6 +1,4 @@
-use pandora::{semantic_cube, semantic_tables, Lexer, ProgramParser, Stack};
-use semantic_tables::FunctionTable;
-use std::collections::HashMap;
+use pandora::{Lexer, ProgramManager, ProgramParser};
 
 fn normalize(s: &str) -> String {
     s.split_whitespace().collect::<Vec<_>>().join(" ")
@@ -12,11 +10,9 @@ fn test_one() {
     source = normalize(&source);
     let lexer = Lexer::new(&source);
     let parser = ProgramParser::new();
-    let mut scope_stack: Stack<String> = Stack::new();
-    let cubo = semantic_cube::CuboSemantico::new();
-    let mut function_table: FunctionTable = HashMap::new();
+    let mut manager = ProgramManager::new();
 
-    let result = parser.parse(&cubo, &mut function_table, &mut scope_stack, lexer);
+    let result = parser.parse(&mut manager, lexer);
 
     assert_eq!(result.is_ok(), true);
 }
@@ -28,11 +24,9 @@ fn test_two() {
     let lexer = Lexer::new(&source);
     let parser = ProgramParser::new();
 
-    let mut scope_stack: Stack<String> = Stack::new();
-    let cubo = semantic_cube::CuboSemantico::new();
-    let mut function_table: FunctionTable = HashMap::new();
+    let mut manager = ProgramManager::new();
 
-    let result = parser.parse(&cubo, &mut function_table, &mut scope_stack, lexer);
+    let result = parser.parse(&mut manager, lexer);
     assert_eq!(result.is_err(), true);
 }
 
@@ -43,12 +37,9 @@ fn test_three() {
     let lexer = Lexer::new(&source);
     let parser = ProgramParser::new();
 
-    let mut scope_stack: Stack<String> = Stack::new();
-    let cubo = semantic_cube::CuboSemantico::new();
-    let mut function_table: FunctionTable = HashMap::new();
+    let mut manager = ProgramManager::new();
 
-    let result = parser.parse(&cubo, &mut function_table, &mut scope_stack, lexer);
-
+    let result = parser.parse(&mut manager, lexer);
     assert_eq!(result.is_err(), true);
 }
 
@@ -58,11 +49,9 @@ fn test_four() {
     source = normalize(&source);
     let lexer = Lexer::new(&source);
     let parser = ProgramParser::new();
-    let mut scope_stack: Stack<String> = Stack::new();
-    let cubo = semantic_cube::CuboSemantico::new();
-    let mut function_table: FunctionTable = HashMap::new();
+    let mut manager = ProgramManager::new();
 
-    let result = parser.parse(&cubo, &mut function_table, &mut scope_stack, lexer);
+    let result = parser.parse(&mut manager, lexer);
 
     assert_eq!(result.is_err(), true);
 }
@@ -74,11 +63,8 @@ fn test_five() {
     let lexer = Lexer::new(&source);
     let parser = ProgramParser::new();
 
-    let mut scope_stack: Stack<String> = Stack::new();
-    let cubo = semantic_cube::CuboSemantico::new();
-    let mut function_table: FunctionTable = HashMap::new();
+    let mut manager = ProgramManager::new();
 
-    let result = parser.parse(&cubo, &mut function_table, &mut scope_stack, lexer);
-
+    let result = parser.parse(&mut manager, lexer);
     assert_eq!(result.is_ok(), true);
 }

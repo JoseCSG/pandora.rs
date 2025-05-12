@@ -1,15 +1,13 @@
 #![allow(warnings)]
 
-mod lexer;
-mod semantic_cube;
-mod semantic_tables;
-mod tokens;
+mod compiler;
 mod utils;
 
+use compiler::lexer::Lexer;
+use compiler::program_manager::ProgramManager;
+use compiler::semantic_tables::FunctionTable;
 use grammar::ProgramParser;
 use lalrpop_util::lalrpop_mod;
-use lexer::Lexer;
-use semantic_tables::FunctionTable;
 use std::collections::HashMap;
 use utils::stack::Stack;
 
@@ -20,15 +18,13 @@ fn normalize(s: &str) -> String {
 }
 
 fn main() {
-    let mut source = std::fs::read_to_string("tests/test3.pdra").expect("Unable to read file");
+    let mut source = std::fs::read_to_string("tests/test1.pdra").expect("Unable to read file");
     source = normalize(&source);
     let lexer = Lexer::new(&source);
     let parser = ProgramParser::new();
 
-    let mut scope_stack: Stack<String> = Stack::new();
-    let cubo = semantic_cube::CuboSemantico::new();
-    let mut function_table: FunctionTable = HashMap::new();
+    let mut program_manager = ProgramManager::new();
 
-    let result = parser.parse(&cubo, &mut function_table, &mut scope_stack, lexer);
+    let result = parser.parse(&mut program_manager, lexer);
     print!("{:?}", result.unwrap());
 }
