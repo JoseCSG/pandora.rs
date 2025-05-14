@@ -8,7 +8,7 @@ pub enum Type {
     Error,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Copy)]
 pub enum Operator {
     Add,
     Subtract,

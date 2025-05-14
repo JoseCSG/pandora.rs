@@ -4,6 +4,7 @@ use std::collections::HashMap;
 pub enum VarValue {
     Int(i32),
     Float(f32),
+    Bool(bool),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -17,6 +18,7 @@ pub struct VariableInfo {
     pub name: String,
     pub value: VarValue,
     pub var_type: VarType,
+    pub address: i32,
 }
 
 #[derive(Debug, Clone, PartialEq)]

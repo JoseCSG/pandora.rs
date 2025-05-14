@@ -50,12 +50,12 @@ pub enum Token {
     FloatDatatype,
     #[regex("[a-zA-Z_][a-zA-Z0-9_]*", |lex| lex.slice().to_string())]
     Id(String),
-    #[regex("[0-9]+")]
-    Number,
-    #[regex(r"[0-9]+\.[0-9]+")]
-    Float,
-    #[regex(r#""[^"\n]*""#)]
-    String,
+    #[regex("[0-9]+", |lex| lex.slice().parse())]
+    Number(i32),
+    #[regex(r"[0-9]+\.[0-9]+", |lex| lex.slice().parse())]
+    Float(f32),
+    #[regex(r#""[^"\n]*""#, |lex| lex.slice().to_string())]
+    String(String),
     #[token("+")]
     OpAdd,
     #[token("-")]

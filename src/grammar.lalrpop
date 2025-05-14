@@ -3,7 +3,7 @@ use crate::compiler::semantic_cube;
 use crate::compiler::semantic_tables;
 use std::collections::HashMap;
 use crate::compiler::program_manager::ProgramManager;
-
+use crate::compiler::quadruplets::{QuadOperator, convert_semantic_op_to_quad_op};
 
 grammar<'input>(program_manager: &'input mut ProgramManager);
 
@@ -25,9 +25,9 @@ extern {
     "id" => Token::Id(_String),
     "intType" => Token::IntDatatype,
     "floatType" => Token::FloatDatatype,
-    "number" => Token::Number,
-    "float" => Token::Float,
-    "string" => Token::String,
+    "number" => Token::Number(_i32),
+    "float" => Token::Float(_f32),
+    "string" => Token::String(_String),
     "+" => Token::OpAdd,
     "-" => Token::OpSub,
     "*" => Token::OpMul,
@@ -50,118 +50,235 @@ extern {
 
 }
 
-Cte: semantic_cube::Type = {
-  <val: "number"> => semantic_cube::Type::Int,
-  <val: "float"> => semantic_cube::Type::Float,
+Cte: i32 = {
+  <val: "number"> => {
+    let cte_val = match val {
+      Token::Number(ref num) => num.clone(),
+      _ => panic!("Invalid constant"),
+    };
+
+    program_manager.value_table.insert_cte_int(cte_val)
+  },
+  <val: "float"> => {
+    let cte_val = match val {
+      Token::Float(ref num) => num.clone(),
+      _ => panic!("Invalid constant"),
+    };
+    program_manager.value_table.insert_cte_float(cte_val)
+  }
 }
 
-CteString: String = {
-  <val: "string"> => val.to_string(),
+CteString: i32 = {
+  <val: "string"> => {
+    let str_val =match val {
+      Token::String(ref str) => str.clone(),
+      _ => panic!("Invalid constant"),
+    };
+    program_manager.value_table.insert_cte_string(str_val.clone())
+  },
 }
 
 OpAditivo: semantic_cube::Operator = {
-  <op: "+"> => semantic_cube::Operator::Add,
-  <op: "-"> => semantic_cube::Operator::Subtract,
+  <op: "+"> => {
+    program_manager.operator_stack.push(semantic_cube::Operator::Add);
+    semantic_cube::Operator::Add
+  },
+  <op: "-"> => {
+    program_manager.operator_stack.push(semantic_cube::Operator::Subtract);
+    semantic_cube::Operator::Subtract
+  }
 }
 
 OpMultiplicativo: semantic_cube::Operator = {
-  <op: "*"> => semantic_cube::Operator::Multiply,
-  <op: "/"> => semantic_cube::Operator::Divide,
+  <op: "*"> => {
+    program_manager.operator_stack.push(semantic_cube::Operator::Multiply);
+    semantic_cube::Operator::Multiply
+  },
+  <op: "/"> => {
+    program_manager.operator_stack.push(semantic_cube::Operator::Divide);
+    semantic_cube::Operator::Divide
+  },
 }
 
 OpLogico: semantic_cube::Operator = {
-  <op: "<"> => semantic_cube::Operator::LessThan,
-  <op: ">"> => semantic_cube::Operator::GreaterThan,
-  <op: "!="> => semantic_cube::Operator::NotEqual,
+  <op: "<"> => {
+    program_manager.operator_stack.push(semantic_cube::Operator::LessThan);
+    semantic_cube::Operator::LessThan
+  },
+  <op: ">"> => {
+    program_manager.operator_stack.push(semantic_cube::Operator::GreaterThan);
+    semantic_cube::Operator::GreaterThan
+  },
+  <op: "!="> => {
+    program_manager.operator_stack.push(semantic_cube::Operator::NotEqual);
+    semantic_cube::Operator::NotEqual
+  },
 }
 
 //TODO: Build AST to return value
-pub Expresion: (semantic_cube::Type, semantic_tables::VarValue) = {
-  <left: Exp> <rest: ExpresionTail> => {
-    let exp_type = rest.into_iter().fold(left, |acc, (op, right)| {
-      program_manager.cubo.get_type(acc, op, right)
-    });
-    let value = semantic_tables::VarValue::Int(0);
-    (exp_type, value)
+pub Expresion: (semantic_cube::Type, i32) = {
+  <left: Exp> <op: OpLogico> <right: Exp> => {
+    let right_address = program_manager.operand_stack.pop().unwrap();
+    let left_address = program_manager.operand_stack.pop().unwrap();
+    let res_type = program_manager.cubo.get_type(left.0, op, right.0);
+
+    let temp_address = match res_type {
+      semantic_cube::Type::Int => program_manager.new_temp(semantic_cube::Type::Int),
+      semantic_cube::Type::Float => program_manager.new_temp(semantic_cube::Type::Float),
+      _ => panic!("Invalid type"),
+    };
+
+    let quad_op = convert_semantic_op_to_quad_op(op);
+
+    program_manager.create_quad(quad_op, left_address, Some(right_address), Some(temp_address));
+    program_manager.operand_stack.push(temp_address);
+
+    (res_type, temp_address)
+
   },
+  <exp: Exp> => exp,
 };
 
-ExpresionTail: Vec<(semantic_cube::Operator, semantic_cube::Type)> = {
-  <rest: (<OpLogico> <Exp>)*> =>  rest,
-};
-
-Exp: semantic_cube::Type = {
+Exp: (semantic_cube::Type, i32) = {
   <left: Exp> <op: OpAditivo> <right: Termino> => {
-    program_manager.cubo.get_type(left, op, right)
+    let right_address = program_manager.operand_stack.pop().unwrap();
+    let left_address = program_manager.operand_stack.pop().unwrap();
+    let res_type = program_manager.cubo.get_type(left.0, op, right.0);
+
+    let temp_address = match res_type {
+      semantic_cube::Type::Int => program_manager.new_temp(semantic_cube::Type::Int),
+      semantic_cube::Type::Float => program_manager.new_temp(semantic_cube::Type::Float),
+      _ => panic!("Invalid type"),
+    };
+
+    let op_str = match op {
+      semantic_cube::Operator::Add => "+",
+      semantic_cube::Operator::Subtract => "-",
+      _ => panic!("Invalid operator"),
+    };
+
+    program_manager.polish_vector.push(op_str.to_string());
+
+    let quad_op = convert_semantic_op_to_quad_op(op); 
+
+    program_manager.create_quad(quad_op, left_address, Some(right_address), Some(temp_address));
+    program_manager.operand_stack.push(temp_address);
+
+    (res_type, temp_address)
   },
   <term: Termino> => term,
 }
 
-Termino: semantic_cube::Type = {
+Termino: (semantic_cube::Type, i32) = {
   <left: Termino> <op: OpMultiplicativo> <right: Factor> => {
-    program_manager.cubo.get_type(left, op, right)
+    let right_address = program_manager.operand_stack.pop().unwrap();
+    let left_address = program_manager.operand_stack.pop().unwrap();
+    let res_type = program_manager.cubo.get_type(left.0, op, right.0);
+
+    let temp_address = match res_type {
+      semantic_cube::Type::Int => program_manager.new_temp(semantic_cube::Type::Int),
+      semantic_cube::Type::Float => program_manager.new_temp(semantic_cube::Type::Float),
+      _ => panic!("Invalid type"),
+    };
+
+    let quad_op = convert_semantic_op_to_quad_op(op);
+    program_manager.create_quad(quad_op, left_address, Some(right_address), Some(temp_address));
+
+    let op_str = match op {
+      semantic_cube::Operator::Multiply => "*",
+      semantic_cube::Operator::Divide => "/",
+      _ => panic!("Invalid operator"),
+    };
+
+
+    program_manager.polish_vector.push(op_str.to_string());
+    program_manager.operand_stack.push(temp_address);
+    (res_type, temp_address)
   },
   <factor: Factor> => factor
 }
 
-Factor: semantic_cube::Type = {
-  "(" <exp: Expresion> ")" => exp.0,
-  <op_add: OpAditivo> <val: Id> => {
+Factor: (semantic_cube::Type, i32) = {
+  "(" <exp: Expresion> ")" => exp,
+  <op_add: OpAditivo> <val: Factor> => {
     // Implement later with variable table
-    semantic_cube::Type::Int
+    (semantic_cube::Type::Int, 0)
   
   },
   <val: Id> => {
-    //TODO: Implement this
-    // Implement later with variable table
-    // Need to figure out where to check the current scope
-    semantic_cube::Type::Int
+    let var_info = program_manager.tabla_funciones.get("main").unwrap().vars.get(&val).unwrap();
+    program_manager.operand_stack.push(var_info.address);
+    program_manager.polish_vector.push(var_info.name.clone());
+    let var_type = match var_info.var_type {
+      semantic_tables::VarType::Int => semantic_cube::Type::Int,
+      semantic_tables::VarType::Float => semantic_cube::Type::Float,
+    };
+    (var_type, var_info.address)
   },
-  Cte,
+  <val: Cte> => {
+    program_manager.operand_stack.push(val);
+    program_manager.polish_vector.push(val.to_string());
+    (semantic_cube::Type::Int, val)
+  }
 }
 
-Statement: String = {
-  <Assign> => "Assign".to_string(),
+Statement: () = {
+  <Assign>,
   <Condition>,
   <Cycle>,
   <Print>,
   <FCall>,
 }
 
-ExpList: Vec<(semantic_cube::Type, semantic_tables::VarValue)> = {
-  <start: Expresion> <rest: ("," <Expresion>)*> => {
-    rest
-  }
-}
-
 Assign: () = {
   <id: Id> "=" <exp: Expresion> ";" => {
-
+    let var_info = program_manager.tabla_funciones.get("main").unwrap().vars.get(&id).unwrap();
+    program_manager.create_quad(QuadOperator::Assign, var_info.address, Some(exp.1), None);
   },
 }
 
-PrintPrime: Vec<(semantic_cube::Type, semantic_tables::VarValue)> = {
-  CteString => {
-    vec!["CteString".to_string()];
-    vec![(semantic_cube::Type::Int, semantic_tables::VarValue::Int(0))]
+ExpList: Vec<(semantic_cube::Type, i32)> = {
+  <start: Expresion> <rest: ("," <Expresion>)*> => {
+    let mut exp_list = vec![start];
+    for exp in rest {
+      exp_list.push(exp);
+    }
+    println!("ExpList: {:?}", exp_list);
+    exp_list
+  }
+}
+
+
+PrintPrime: Vec<(semantic_cube::Type, i32)> = {
+  <str: CteString> => {
+    println!("String: {}", str);
+    vec![(semantic_cube::Type::Int, str)]
   },
   <args: ExpList> => args,
 }
 
-Print: String = {
-  "print" "(" <PrintPrime> ")" ";" => "Print".to_string(),
+Print: () = {
+  "print" "(" <exps: PrintPrime> ")" ";" => {
+    for exp in exps {
+      program_manager.create_quad(QuadOperator::Print, exp.1, None, None);
+    }
+  },
 }
 
-Cycle: String = {
-  "while" "(" <Expresion> ")" "do"  <Body>  => "Ciclo".to_string(), 
+Cycle: () = {
+  "while" "(" <Expresion> ")" "do"  <Body>, 
 }
 
-Condition: String = {
-  "if" "(" <exp:Expresion> ")" <body: Body> ("else" <Body>)? => "Condition".to_string(),
+Condition: () = {
+  "if" "(" <exp:Expresion> ")" <body: Body> ("else" <Body>)? => {
+
+  },
 }
 
-FCall: String = {
-  <id: Id> "(" <args: ExpList> ")" ";" => "FCall".to_string(),
+FCall: () = {
+  <id: Id> "(" <args: ExpList> ")" ";" => {
+
+  },
 }
 
 Body: String = {
@@ -198,7 +315,11 @@ VarsPrime: Vec<semantic_tables::VariableInfo> = {
     let mut variables_info = vec![];
     for id in ids {
       let id_value = id.clone();
-
+      let address = match val {
+        semantic_cube::Type::Int => program_manager.value_table.insert_integer(0, "global"),
+        semantic_cube::Type::Float => program_manager.value_table.insert_float(0.0, "global"),
+        _ => panic!("Invalid type"),
+      };
       let _var_type: semantic_tables::VarType = match val {
         semantic_cube::Type::Int => semantic_tables::VarType::Int,
         semantic_cube::Type::Float => semantic_tables::VarType::Float,
@@ -208,7 +329,7 @@ VarsPrime: Vec<semantic_tables::VariableInfo> = {
         { value: match _var_type {
           semantic_tables::VarType::Int => semantic_tables::VarValue::Int(0),
           semantic_tables::VarType::Float => semantic_tables::VarValue::Float(0.0),
-        }, var_type: _var_type, name: id_value.clone()  };
+        }, var_type: _var_type, name: id_value.clone(), address: address  };
       
       variables_info.push(var_info);
     }   
@@ -254,27 +375,24 @@ FunctionId: String = {
 // then add the params, and vars to the var_table of the function 
 Funcs: () = {
   "void" <id: FunctionId> "(" <_params: Params> ")" "[" <vars: Vars?> <body:Body> "]" ";" => {
-    program_manager.scope_stack.push(id.to_string());
     let mut temp_tabla_vars: HashMap<String, semantic_tables::VariableInfo> = HashMap::new();
     for param in &_params {
       if temp_tabla_vars.contains_key(&param.name) {
         panic!("Variable {} is already declared in the params of the function {}", param.name, id.to_string());
       }
 
+      let address = program_manager.value_table.insert_integer(0, "local");
+
       let var_info: semantic_tables::VariableInfo = semantic_tables::VariableInfo 
         { value: match param.var_type {
           semantic_tables::VarType::Int => semantic_tables::VarValue::Int(0),
           semantic_tables::VarType::Float => semantic_tables::VarValue::Float(0.0),
-        }, var_type: param.var_type.clone(), name: param.name.clone()  };
+        }, var_type: param.var_type.clone(), name: param.name.clone(), address: address  };
         temp_tabla_vars.insert(param.name.clone(), var_info);
     }
     
     for var in vars.unwrap_or(vec![]) {
       for var_info in var {
-        if program_manager.tabla_funciones.get("main").unwrap().vars.contains_key(&var_info.name){
-          panic!("Variable {} in function {} is already declared as global", var_info.name, id.to_string());
-        }
-
         if temp_tabla_vars.contains_key(&var_info.name) {
           panic!("Variable {} is already declared either in the params or in the function", var_info.name);
         }
@@ -288,7 +406,6 @@ Funcs: () = {
 
 VarsProgram: () = {
   <vars: Vars?> => {
-    program_manager.scope_stack.push("main".to_string());
     let mut temp_tabla_vars: HashMap<String, semantic_tables::VariableInfo> = HashMap::new();
     for var in vars.unwrap_or(vec![]) {
       for var_info in var {
@@ -304,5 +421,9 @@ VarsProgram: () = {
 }
 
 pub Program: String = {
-  "program" <id: Id> ";" <vars: VarsProgram> <funcs: Funcs*> <st_main: "main">  <body: Body>  <end: "end"> => format!("Program exit with value {}", 0),
+  "program" <id: Id> ";" <vars: VarsProgram> <funcs: Funcs*> <st_main: "main">  <body: Body>  <end: "end"> => {
+    println!("{:?}", program_manager.quadruplets);
+    println!("{:?}", program_manager.polish_vector);
+    format!("Program exit with value {}", 0)
+  },
 }

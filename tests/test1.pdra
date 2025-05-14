@@ -1,18 +1,9 @@
 program test_one;
-    var a, b :int;
+    var a, b, i :int;
         e :float;
-    void suerte(a: int, ex: float)[
-        var algo :float;
-            test2, algo2 :int;
-        {
-            print(test, algo);
-        }
-    ];
 
 main {
-    while ( i < 3 ) do {
-        print(i);
-            i = i + 1;
-        }        
+        a = i + 1 + 2.4 * 10;
+        print(a, 2 * 3);
     }
 end
