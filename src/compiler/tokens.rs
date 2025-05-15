@@ -54,7 +54,7 @@ pub enum Token {
     Number(i32),
     #[regex(r"[0-9]+\.[0-9]+", |lex| lex.slice().parse())]
     Float(f32),
-    #[regex(r#""[^"\n]*""#, |lex| lex.slice().to_string())]
+    #[regex(r#""[^"\n]*""#, |lex| lex.slice()[1..lex.slice().len()-1].to_string())]
     String(String),
     #[token("+")]
     OpAdd,

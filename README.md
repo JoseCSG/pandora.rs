@@ -4,6 +4,8 @@
 
 En esta entrega implemente una tabla de valores para tener direcciones virtuales de las variables que son declaradas. Modifique las reglas de Termino, Expresion, Exp y Factor para que el vector polaco funcionara de forma correcta. Se crean cuadruplos con los valores de memoria y valores de operacion correspondientes.
 
+Implemente una clase llamada ProgramManager en la que gestiono todas las operaciones del programa. En este tengo el vector polaco, las pilas para generarlo, la tabla de valores, la tabla de funciones, el cubo semántico, y la lista de cuadruplos. Asi como metodos para interactuar con estos atributos.
+
 ## Analisis Semantico
 
 En esta entrega se implementaron clases de tablas de variables y funciones, para poder guardar la información de las variables declaradas en una función y globalmente. De igual manera, se implementó un cubo semántico, el cual permite determinar si las operaciones dentro de una operacion son validas o no.

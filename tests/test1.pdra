@@ -3,7 +3,11 @@ program test_one;
         e :float;
 
 main {
+        if (i - 3 < (10 + 2) / 8) {
+            print("i is less than 10");
+        }
         a = i + 1 + 2.4 * 10;
+        print("Hello World!");
         print(a, 2 * 3);
     }
 end

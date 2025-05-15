@@ -125,13 +125,14 @@ pub Expresion: (semantic_cube::Type, i32) = {
     let temp_address = match res_type {
       semantic_cube::Type::Int => program_manager.new_temp(semantic_cube::Type::Int),
       semantic_cube::Type::Float => program_manager.new_temp(semantic_cube::Type::Float),
+      semantic_cube::Type::Bool => program_manager.new_temp(semantic_cube::Type::Bool),
       _ => panic!("Invalid type"),
     };
 
     let quad_op = convert_semantic_op_to_quad_op(op);
 
     program_manager.create_quad(quad_op, left_address, Some(right_address), Some(temp_address));
-    program_manager.operand_stack.push(temp_address);
+    program_manager.polish_vector.clear();
 
     (res_type, temp_address)
 
@@ -148,6 +149,7 @@ Exp: (semantic_cube::Type, i32) = {
     let temp_address = match res_type {
       semantic_cube::Type::Int => program_manager.new_temp(semantic_cube::Type::Int),
       semantic_cube::Type::Float => program_manager.new_temp(semantic_cube::Type::Float),
+      semantic_cube::Type::Bool => program_manager.new_temp(semantic_cube::Type::Bool),
       _ => panic!("Invalid type"),
     };
 
@@ -178,6 +180,7 @@ Termino: (semantic_cube::Type, i32) = {
     let temp_address = match res_type {
       semantic_cube::Type::Int => program_manager.new_temp(semantic_cube::Type::Int),
       semantic_cube::Type::Float => program_manager.new_temp(semantic_cube::Type::Float),
+      semantic_cube::Type::Bool => program_manager.new_temp(semantic_cube::Type::Bool),
       _ => panic!("Invalid type"),
     };
 
@@ -190,7 +193,6 @@ Termino: (semantic_cube::Type, i32) = {
       _ => panic!("Invalid operator"),
     };
 
-
     program_manager.polish_vector.push(op_str.to_string());
     program_manager.operand_stack.push(temp_address);
     (res_type, temp_address)
@@ -200,11 +202,6 @@ Termino: (semantic_cube::Type, i32) = {
 
 Factor: (semantic_cube::Type, i32) = {
   "(" <exp: Expresion> ")" => exp,
-  <op_add: OpAditivo> <val: Factor> => {
-    // Implement later with variable table
-    (semantic_cube::Type::Int, 0)
-  
-  },
   <val: Id> => {
     let var_info = program_manager.tabla_funciones.get("main").unwrap().vars.get(&val).unwrap();
     program_manager.operand_stack.push(var_info.address);
@@ -223,17 +220,19 @@ Factor: (semantic_cube::Type, i32) = {
 }
 
 Statement: () = {
-  <Assign>,
-  <Condition>,
-  <Cycle>,
-  <Print>,
-  <FCall>,
+  Assign,
+  Condition,
+  Cycle,
+  Print,
+  FCall,
 }
 
 Assign: () = {
   <id: Id> "=" <exp: Expresion> ";" => {
     let var_info = program_manager.tabla_funciones.get("main").unwrap().vars.get(&id).unwrap();
     program_manager.create_quad(QuadOperator::Assign, var_info.address, Some(exp.1), None);
+    println!("VP from assign: {:?}", program_manager.polish_vector);
+    program_manager.polish_vector.clear();
   },
 }
 
@@ -243,7 +242,6 @@ ExpList: Vec<(semantic_cube::Type, i32)> = {
     for exp in rest {
       exp_list.push(exp);
     }
-    println!("ExpList: {:?}", exp_list);
     exp_list
   }
 }
@@ -251,10 +249,12 @@ ExpList: Vec<(semantic_cube::Type, i32)> = {
 
 PrintPrime: Vec<(semantic_cube::Type, i32)> = {
   <str: CteString> => {
-    println!("String: {}", str);
     vec![(semantic_cube::Type::Int, str)]
   },
-  <args: ExpList> => args,
+  <args: ExpList> => {
+    program_manager.polish_vector.clear();
+    args
+  },
 }
 
 Print: () = {
@@ -422,7 +422,8 @@ VarsProgram: () = {
 
 pub Program: String = {
   "program" <id: Id> ";" <vars: VarsProgram> <funcs: Funcs*> <st_main: "main">  <body: Body>  <end: "end"> => {
-    println!("{:?}", program_manager.quadruplets);
+    program_manager.quadruplets.print_elements();
+    println!("{:?}", program_manager.value_table);
     println!("{:?}", program_manager.polish_vector);
     format!("Program exit with value {}", 0)
   },

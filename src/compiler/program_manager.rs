@@ -33,6 +33,7 @@ impl ProgramManager {
         match var_type {
             Type::Int => self.value_table.insert_integer(0, "temp"),
             Type::Float => self.value_table.insert_float(0.0, "temp"),
+            Type::Bool => self.value_table.insert_bool(false),
             _ => panic!("Invalid type"),
         }
     }

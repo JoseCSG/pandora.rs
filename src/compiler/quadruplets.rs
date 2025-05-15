@@ -1,5 +1,6 @@
 use crate::compiler::semantic_cube::Operator;
 use crate::utils::queue::Queue;
+use std::fmt::{Display, Formatter, Result};
 
 #[derive(Debug, Clone)]
 pub struct Quadruplet {
@@ -7,6 +8,42 @@ pub struct Quadruplet {
     arg1: i32,
     arg2: Option<i32>,
     result: Option<i32>,
+}
+
+impl Display for Quadruplet {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        let op_str = match self.operator {
+            1 => "GOTO",
+            2 => "GOTOV",
+            3 => "GOTOF",
+            4 => "=",
+            5 => "+",
+            6 => "-",
+            7 => "*",
+            8 => "/",
+            9 => ">",
+            10 => "<",
+            11 => "!=",
+            12 => "print",
+            _ => "UNKNOWN",
+        };
+
+        let arg2_str = match self.arg2 {
+            Some(val) => val.to_string(),
+            None => "_".to_string(),
+        };
+
+        let result_str = match self.result {
+            Some(val) => val.to_string(),
+            None => "_".to_string(),
+        };
+
+        write!(
+            f,
+            "({: <6} {: <5} {: <5} {: <5})",
+            op_str, self.arg1, arg2_str, result_str
+        )
+    }
 }
 
 pub enum QuadOperator {
@@ -66,6 +103,9 @@ impl QuadrupletList {
     }
     pub fn pop(&mut self) {
         self.quadruplets.pop();
+    }
+    pub fn print_elements(&self) {
+        self.quadruplets.print_elements();
     }
 }
 

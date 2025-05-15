@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 const START_INT_VALUES: i32 = 1000;
 const START_FLOAT_VALUES: i32 = 4000;
 const START_BOOL_VALUES: i32 = 8000;
@@ -24,8 +26,7 @@ enum ConstValue {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ValueTable {
-    total_int_values: i32,
-    total_float_values: i32,
+    counters: HashMap<String, i32>,
     var_values: Vec<Vec<Value>>,
     const_values: Vec<ConstValue>,
 }
@@ -33,59 +34,37 @@ pub struct ValueTable {
 impl ValueTable {
     pub fn new() -> Self {
         ValueTable {
-            total_int_values: 0,
-            total_float_values: 0,
+            counters: HashMap::new(),
             var_values: vec![vec![], vec![], vec![]],
             const_values: vec![],
         }
     }
 
     pub fn insert_integer(&mut self, value: i32, lifetime: &str) -> i32 {
-        let address = match lifetime {
-            "global" => {
-                self.var_values[0].insert(0, Value::Int(value));
-                self.total_int_values += 1;
-                self.var_values[0].len() as i32 + START_INT_VALUES
-            }
-            "local" => {
-                self.var_values[0].push(Value::Int(value));
-                self.total_int_values += 1;
-                self.var_values[0].len() as i32 + START_INT_VALUES + LOCAL_VALUES
-            }
-            "temp" => {
-                self.var_values[0].push(Value::Int(value));
-                self.total_int_values += 1;
-                self.var_values[0].len() as i32 + START_INT_VALUES + TEMP_VALUES
-            }
+        let key = format!("int_{}", lifetime);
+        let offset = match lifetime {
+            "global" => START_INT_VALUES,
+            "local" => START_INT_VALUES + LOCAL_VALUES,
+            "temp" => START_INT_VALUES + TEMP_VALUES,
             _ => panic!("Invalid lifetime"),
         };
+        let address = self.var_values[0].len() as i32 + offset;
         self.var_values[0].push(Value::Int(value));
-        self.total_int_values += 1;
+        *self.counters.entry(key).or_insert(0) += 1;
         address
     }
 
     pub fn insert_float(&mut self, value: f32, lifetime: &str) -> i32 {
-        let address = match lifetime {
-            "global" => {
-                self.var_values[1].insert(0, Value::Float(value));
-                self.total_int_values += 1;
-                self.var_values[1].len() as i32 + START_FLOAT_VALUES
-            }
-            "local" => {
-                self.var_values[1].push(Value::Float(value));
-                self.total_int_values += 1;
-                self.var_values[1].len() as i32 + START_FLOAT_VALUES + LOCAL_VALUES
-            }
-            "temp" => {
-                self.var_values[1].push(Value::Float(value));
-                self.total_int_values += 1;
-                self.var_values[1].len() as i32 + START_FLOAT_VALUES + TEMP_VALUES
-            }
+        let key = format!("float_{}", lifetime);
+        let offset = match lifetime {
+            "global" => START_FLOAT_VALUES,
+            "local" => START_FLOAT_VALUES + LOCAL_VALUES,
+            "temp" => START_FLOAT_VALUES + TEMP_VALUES,
             _ => panic!("Invalid lifetime"),
         };
-
+        let address = self.var_values[1].len() as i32 + offset;
         self.var_values[1].push(Value::Float(value));
-        self.total_float_values += 1;
+        *self.counters.entry(key).or_insert(0) += 1;
         address
     }
 
@@ -107,14 +86,6 @@ impl ValueTable {
     pub fn insert_cte_string(&mut self, value: String) -> i32 {
         self.const_values.push(ConstValue::String(value));
         self.const_values.len() as i32 + START_CONST_STRING_VALUES
-    }
-
-    pub fn clear_temp_int(&mut self) {
-        self.var_values[0] = self.var_values[0][0..self.total_int_values as usize].to_vec();
-    }
-
-    pub fn clear_temp_float(&mut self) {
-        self.var_values[1] = self.var_values[1][0..self.total_float_values as usize].to_vec();
     }
 
     pub fn clear_bool(&mut self) {

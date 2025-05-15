@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 #[derive(Debug)]
 pub struct Queue<T> {
     elements: Vec<T>,
@@ -32,5 +34,14 @@ impl<T> Queue<T> {
 
     pub fn len(&self) -> usize {
         self.elements.len()
+    }
+
+    pub fn print_elements(&self)
+    where
+        T: Display,
+    {
+        for element in self.elements.iter() {
+            println!("{}", element);
+        }
     }
 }
