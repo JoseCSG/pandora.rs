@@ -1,5 +1,11 @@
 # Documentación del lenguaje
 
+## Creación de cuadruplos para estatutos While E If
+
+Se añadio un nuevo stack a la clase ProgramManager llamado jumps_stack, el cual guarda la posicion para los estatutos no completos (GOTOF, GOTO) para los estatutos **If** Y **While**.
+
+Se crearon puntos neuralgicos para hacer push al stack con la posición del estatuto a modificar, y para completar el cuadruplo correspondiente con la posición adecuada.
+
 ## Tabla de valores
 
 En esta entrega implemente una tabla de valores para tener direcciones virtuales de las variables que son declaradas. Modifique las reglas de Termino, Expresion, Exp y Factor para que el vector polaco funcionara de forma correcta. Se crean cuadruplos con los valores de memoria y valores de operacion correspondientes.

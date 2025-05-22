@@ -1,3 +1,4 @@
+use crate::compiler::semantic_cube::Type;
 use std::collections::HashMap;
 
 const START_INT_VALUES: i32 = 1000;
@@ -110,6 +111,22 @@ impl ValueTable {
         match self.var_values[2][(address - START_BOOL_VALUES) as usize] {
             Value::Bool(value) => value,
             _ => panic!("Invalid address"),
+        }
+    }
+
+    pub fn get_var_type(&self, address: i32) -> Type {
+        if address >= START_INT_VALUES && address < START_FLOAT_VALUES {
+            Type::Int
+        } else if address >= START_FLOAT_VALUES && address < START_BOOL_VALUES {
+            Type::Float
+        } else if address >= START_BOOL_VALUES && address < START_CONST_INT_VALUES {
+            Type::Bool
+        } else if address >= START_CONST_INT_VALUES && address < START_CONST_FLOAT_VALUES {
+            Type::Int
+        } else if address >= START_CONST_FLOAT_VALUES && address < START_CONST_STRING_VALUES {
+            Type::Float
+        } else {
+            Type::Error
         }
     }
 }

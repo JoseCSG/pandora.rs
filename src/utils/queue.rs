@@ -36,12 +36,20 @@ impl<T> Queue<T> {
         self.elements.len()
     }
 
+    pub fn get(&self, index: usize) -> Option<&T> {
+        self.elements.get(index)
+    }
+
+    pub fn set(&mut self, index: usize, value: T) {
+        self.elements[index] = value;
+    }
+
     pub fn print_elements(&self)
     where
         T: Display,
     {
-        for element in self.elements.iter() {
-            println!("{}", element);
+        for (i, element) in self.elements.iter().enumerate() {
+            println!("{} {}", i, element);
         }
     }
 }

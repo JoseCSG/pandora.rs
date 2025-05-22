@@ -4,10 +4,10 @@ use std::fmt::{Display, Formatter, Result};
 
 #[derive(Debug, Clone)]
 pub struct Quadruplet {
-    operator: i32,
-    arg1: i32,
-    arg2: Option<i32>,
-    result: Option<i32>,
+    pub operator: i32,
+    pub arg1: i32,
+    pub arg2: Option<i32>,
+    pub result: Option<i32>,
 }
 
 impl Display for Quadruplet {
@@ -25,6 +25,7 @@ impl Display for Quadruplet {
             10 => "<",
             11 => "!=",
             12 => "print",
+            13 => "END",
             _ => "UNKNOWN",
         };
 
@@ -59,6 +60,7 @@ pub enum QuadOperator {
     LessThan,
     NotEqual,
     Print,
+    EndProgram,
 }
 
 /*
@@ -74,6 +76,7 @@ pub enum QuadOperator {
 10 - <
 11 - !=
 12 - print
+13 - end_program
 */
 
 impl Quadruplet {
@@ -104,6 +107,18 @@ impl QuadrupletList {
     pub fn pop(&mut self) {
         self.quadruplets.pop();
     }
+    pub fn len(&self) -> i32 {
+        self.quadruplets.len() as i32
+    }
+
+    pub fn get(&self, index: i32) -> Option<&Quadruplet> {
+        self.quadruplets.get(index as usize)
+    }
+
+    pub fn set(&mut self, index: i32, value: Quadruplet) {
+        self.quadruplets.set(index as usize, value);
+    }
+
     pub fn print_elements(&self) {
         self.quadruplets.print_elements();
     }
@@ -118,6 +133,25 @@ pub fn convert_semantic_op_to_quad_op(op: Operator) -> QuadOperator {
         Operator::GreaterThan => QuadOperator::GreaterThan,
         Operator::LessThan => QuadOperator::LessThan,
         Operator::NotEqual => QuadOperator::NotEqual,
+        _ => panic!("Invalid operator"),
+    }
+}
+
+pub fn convert_quad_op_to_code(op: i32) -> QuadOperator {
+    match op {
+        1 => QuadOperator::Goto,
+        2 => QuadOperator::GotoV,
+        3 => QuadOperator::GotoF,
+        4 => QuadOperator::Assign,
+        5 => QuadOperator::Add,
+        6 => QuadOperator::Subtract,
+        7 => QuadOperator::Multiply,
+        8 => QuadOperator::Divide,
+        9 => QuadOperator::GreaterThan,
+        10 => QuadOperator::LessThan,
+        11 => QuadOperator::NotEqual,
+        12 => QuadOperator::Print,
+        13 => QuadOperator::EndProgram,
         _ => panic!("Invalid operator"),
     }
 }

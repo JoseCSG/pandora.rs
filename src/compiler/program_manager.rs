@@ -2,9 +2,10 @@ use crate::compiler::quadruplets::{Quadruplet, QuadrupletList};
 use crate::compiler::semantic_cube::{CuboSemantico, Operator, Type};
 use crate::compiler::semantic_tables::FunctionTable;
 use crate::compiler::value_table::ValueTable;
+use core::panic;
 use std::collections::HashMap;
 
-use super::quadruplets::QuadOperator;
+use super::quadruplets::{convert_quad_op_to_code, QuadOperator};
 
 pub struct ProgramManager {
     pub cubo: CuboSemantico,
@@ -14,6 +15,8 @@ pub struct ProgramManager {
     pub operand_stack: Vec<i32>,
     pub operator_stack: Vec<Operator>,
     pub polish_vector: Vec<String>,
+    pub instruction_pointer: i32,
+    pub jumps_stack: Vec<i32>,
 }
 
 impl ProgramManager {
@@ -26,6 +29,8 @@ impl ProgramManager {
             operand_stack: Vec::new(),
             operator_stack: Vec::new(),
             polish_vector: Vec::new(),
+            instruction_pointer: 0,
+            jumps_stack: Vec::new(),
         }
     }
 
@@ -58,9 +63,34 @@ impl ProgramManager {
             QuadOperator::LessThan => 10,
             QuadOperator::NotEqual => 11,
             QuadOperator::Print => 12,
+            QuadOperator::EndProgram => 13,
         };
 
         let quad = Quadruplet::new(op_code, arg1, arg2, result);
         self.quadruplets.push(quad);
+        self.instruction_pointer = self.instruction_pointer + 1;
+    }
+
+    pub fn fill_quad(&mut self, index: i32, result: i32) {
+        if let Some(quad) = self.quadruplets.get(index) {
+            let quad_op_code = convert_quad_op_to_code(quad.operator);
+            match quad_op_code {
+                QuadOperator::Goto => {
+                    self.quadruplets
+                        .set(index, Quadruplet::new(quad.operator, result, None, None));
+                }
+                QuadOperator::GotoF => {
+                    self.quadruplets.set(
+                        index,
+                        Quadruplet::new(quad.operator, quad.arg1, Some(result), None),
+                    );
+                }
+                _ => {
+                    panic!("Invalid quad operator for fill_quad");
+                }
+            }
+        } else {
+            panic!("Quadruplet not found at index {}", index);
+        }
     }
 }
