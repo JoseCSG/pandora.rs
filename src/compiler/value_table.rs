@@ -28,16 +28,20 @@ enum ConstValue {
 #[derive(Debug, Clone, PartialEq)]
 pub struct ValueTable {
     counters: HashMap<String, i32>,
-    var_values: Vec<Vec<Value>>,
-    const_values: Vec<ConstValue>,
+    var_values: Vec<Vec<Vec<Value>>>,
+    const_values: Vec<Vec<ConstValue>>,
 }
 
 impl ValueTable {
     pub fn new() -> Self {
         ValueTable {
             counters: HashMap::new(),
-            var_values: vec![vec![], vec![], vec![]],
-            const_values: vec![],
+            var_values: vec![
+                vec![vec![], vec![], vec![]],
+                vec![vec![], vec![], vec![]],
+                vec![vec![]],
+            ],
+            const_values: vec![vec![], vec![], vec![]],
         }
     }
 
@@ -49,8 +53,16 @@ impl ValueTable {
             "temp" => START_INT_VALUES + TEMP_VALUES,
             _ => panic!("Invalid lifetime"),
         };
-        let address = self.var_values[0].len() as i32 + offset;
-        self.var_values[0].push(Value::Int(value));
+
+        let array_index = match lifetime {
+            "global" => 0,
+            "local" => 1,
+            "temp" => 2,
+            _ => panic!("Invalid lifetime"),
+        };
+
+        let address = self.var_values[0][array_index].len() as i32 + offset;
+        self.var_values[0][array_index].push(Value::Int(value));
         *self.counters.entry(key).or_insert(0) += 1;
         address
     }
@@ -63,30 +75,50 @@ impl ValueTable {
             "temp" => START_FLOAT_VALUES + TEMP_VALUES,
             _ => panic!("Invalid lifetime"),
         };
-        let address = self.var_values[1].len() as i32 + offset;
-        self.var_values[1].push(Value::Float(value));
+
+        let array_index = match lifetime {
+            "global" => 0,
+            "local" => 1,
+            "temp" => 2,
+            _ => panic!("Invalid lifetime"),
+        };
+
+        let address = self.var_values[1][array_index].len() as i32 + offset;
+        self.var_values[1][array_index].push(Value::Float(value));
         *self.counters.entry(key).or_insert(0) += 1;
         address
     }
 
     pub fn insert_bool(&mut self, value: bool) -> i32 {
-        self.var_values[2].push(Value::Bool(value));
-        self.var_values[2].len() as i32 + START_BOOL_VALUES
+        let address = self.var_values[2][0].len() as i32 + START_BOOL_VALUES;
+        self.var_values[2][0].push(Value::Bool(value));
+        address
     }
 
     pub fn insert_cte_int(&mut self, value: i32) -> i32 {
-        self.const_values.push(ConstValue::Int(value));
-        self.const_values.len() as i32 + START_CONST_INT_VALUES
+        let address = self.const_values[0].len() as i32 + START_CONST_INT_VALUES;
+        self.const_values[0].push(ConstValue::Int(value));
+        address
     }
 
     pub fn insert_cte_float(&mut self, value: f32) -> i32 {
-        self.const_values.push(ConstValue::Float(value));
-        self.const_values.len() as i32 + START_CONST_FLOAT_VALUES
+        let address = self.const_values[1].len() as i32 + START_CONST_FLOAT_VALUES;
+        self.const_values[1].push(ConstValue::Float(value));
+        address
     }
 
     pub fn insert_cte_string(&mut self, value: String) -> i32 {
-        self.const_values.push(ConstValue::String(value));
-        self.const_values.len() as i32 + START_CONST_STRING_VALUES
+        let address = self.const_values[2].len() as i32 + START_CONST_STRING_VALUES;
+        self.const_values[2].push(ConstValue::String(value));
+        address
+    }
+
+    pub fn get_string(&mut self, address: i32) -> String {
+        let position = address - START_CONST_STRING_VALUES;
+        match &self.const_values[2][position as usize] {
+            ConstValue::String(value) => value.clone(),
+            _ => panic!("Invalid address for string value"),
+        }
     }
 
     pub fn clear_bool(&mut self) {
@@ -94,24 +126,101 @@ impl ValueTable {
     }
 
     pub fn get_int(&self, address: i32) -> i32 {
-        match self.var_values[0][(address - START_INT_VALUES) as usize] {
-            Value::Int(value) => value,
+        let mut array_index = 0;
+        let mut position = address - START_INT_VALUES;
+        let mut int_type = "var";
+        if address >= START_INT_VALUES + LOCAL_VALUES && address < START_INT_VALUES + TEMP_VALUES {
+            array_index = 1;
+            position = position - LOCAL_VALUES;
+        } else if address >= START_INT_VALUES + TEMP_VALUES && address < START_FLOAT_VALUES {
+            array_index = 2;
+            position = position - TEMP_VALUES;
+        } else if address >= START_CONST_INT_VALUES && address < START_CONST_FLOAT_VALUES {
+            int_type = "const";
+            position = address - START_CONST_INT_VALUES;
+        }
+
+        match int_type {
+            "var" => match self.var_values[0][array_index][position as usize] {
+                Value::Int(value) => value,
+                _ => panic!("Invalid address"),
+            },
+            "const" => match self.const_values[0][position as usize] {
+                ConstValue::Int(value) => value,
+                _ => panic!("Invalid address"),
+            },
             _ => panic!("Invalid address"),
         }
+    }
+
+    pub fn set_int(&mut self, address: i32, value: i32) {
+        let mut array_index = 0;
+        let mut position = address - START_INT_VALUES;
+        if address >= START_INT_VALUES + LOCAL_VALUES && address < START_INT_VALUES + TEMP_VALUES {
+            array_index = 1;
+            position = position - LOCAL_VALUES;
+        } else if address >= START_INT_VALUES + TEMP_VALUES {
+            array_index = 2;
+            position = position - TEMP_VALUES;
+        }
+        self.var_values[0][array_index][position as usize] = Value::Int(value);
     }
 
     pub fn get_float(&self, address: i32) -> f32 {
-        match self.var_values[1][(address - START_FLOAT_VALUES) as usize] {
-            Value::Float(value) => value,
+        let mut array_index = 0;
+        let mut position = address - START_FLOAT_VALUES;
+        let mut float_type = "var";
+        if address >= START_FLOAT_VALUES + LOCAL_VALUES
+            && address < START_FLOAT_VALUES + TEMP_VALUES
+        {
+            array_index = 1;
+            position = position - LOCAL_VALUES;
+        } else if address >= START_FLOAT_VALUES + TEMP_VALUES && address < START_CONST_FLOAT_VALUES
+        {
+            array_index = 2;
+            position = position - TEMP_VALUES;
+        } else if address >= START_CONST_FLOAT_VALUES {
+            float_type = "const";
+            position = address - START_CONST_FLOAT_VALUES;
+        }
+
+        match float_type {
+            "var" => match self.var_values[1][array_index][position as usize] {
+                Value::Float(value) => value,
+                _ => panic!("Invalid address"),
+            },
+            "const" => match self.const_values[1][position as usize] {
+                ConstValue::Float(value) => value,
+                _ => panic!("Invalid address"),
+            },
             _ => panic!("Invalid address"),
         }
     }
 
+    pub fn set_float(&mut self, address: i32, value: f32) {
+        let mut array_index = 0;
+        let mut position = address - START_FLOAT_VALUES;
+        if address >= START_FLOAT_VALUES + LOCAL_VALUES
+            && address < START_FLOAT_VALUES + TEMP_VALUES
+        {
+            array_index = 1;
+            position = position - LOCAL_VALUES;
+        } else if address >= START_FLOAT_VALUES + TEMP_VALUES {
+            array_index = 2;
+            position = position - TEMP_VALUES;
+        }
+        self.var_values[1][array_index][position as usize] = Value::Float(value);
+    }
+
     pub fn get_bool(&self, address: i32) -> bool {
-        match self.var_values[2][(address - START_BOOL_VALUES) as usize] {
+        match self.var_values[2][0][(address - START_BOOL_VALUES) as usize] {
             Value::Bool(value) => value,
             _ => panic!("Invalid address"),
         }
+    }
+
+    pub fn set_bool(&mut self, address: i32, value: bool) {
+        self.var_values[2][0][(address - START_BOOL_VALUES) as usize] = Value::Bool(value);
     }
 
     pub fn get_var_type(&self, address: i32) -> Type {
@@ -125,6 +234,8 @@ impl ValueTable {
             Type::Int
         } else if address >= START_CONST_FLOAT_VALUES && address < START_CONST_STRING_VALUES {
             Type::Float
+        } else if address >= START_CONST_STRING_VALUES {
+            Type::String
         } else {
             Type::Error
         }

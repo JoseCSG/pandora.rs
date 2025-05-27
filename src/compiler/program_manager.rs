@@ -93,4 +93,229 @@ impl ProgramManager {
             panic!("Quadruplet not found at index {}", index);
         }
     }
+
+    pub fn run_program(&mut self) {
+        if self.quadruplets.len() == 0 {
+            panic!("There's no quadruplets")
+        }
+
+        self.instruction_pointer = 0;
+        while self.instruction_pointer < self.quadruplets.len() as i32 {
+            let quad = self.quadruplets.get(self.instruction_pointer).unwrap();
+            let op_code: QuadOperator = convert_quad_op_to_code(quad.operator);
+            match op_code {
+                QuadOperator::Add => {
+                    let arg1_type = self.value_table.get_var_type(quad.arg1);
+                    let arg2_type = self.value_table.get_var_type(quad.arg2.unwrap());
+
+                    if arg1_type == Type::Int && arg2_type == Type::Int {
+                        let arg1 = self.value_table.get_int(quad.arg1);
+                        let arg2 = self.value_table.get_int(quad.arg2.unwrap());
+                        let result = arg1 + arg2;
+                        self.value_table.set_int(quad.result.unwrap(), result);
+                    } else if arg1_type == Type::Float && arg2_type == Type::Float {
+                        let arg1 = self.value_table.get_float(quad.arg1);
+                        let arg2 = self.value_table.get_float(quad.arg2.unwrap());
+                        let result = arg1 + arg2;
+                        self.value_table.set_float(quad.result.unwrap(), result);
+                    } else if arg1_type == Type::Int && arg2_type == Type::Float {
+                        let arg1 = self.value_table.get_int(quad.arg1);
+                        let arg2 = self.value_table.get_float(quad.arg2.unwrap());
+                        let result = arg1 as f32 + arg2;
+                        self.value_table.set_float(quad.result.unwrap(), result);
+                    } else if arg1_type == Type::Float && arg2_type == Type::Int {
+                        let arg1 = self.value_table.get_float(quad.arg1);
+                        let arg2 = self.value_table.get_int(quad.arg2.unwrap());
+                        let result = arg1 + arg2 as f32;
+                        self.value_table.set_float(quad.result.unwrap(), result);
+                    }
+                    self.instruction_pointer += 1;
+                }
+                QuadOperator::Subtract => {
+                    let arg1_type = self.value_table.get_var_type(quad.arg1);
+                    let arg2_type = self.value_table.get_var_type(quad.arg2.unwrap());
+
+                    if arg1_type == Type::Int && arg2_type == Type::Int {
+                        let arg1 = self.value_table.get_int(quad.arg1);
+                        let arg2 = self.value_table.get_int(quad.arg2.unwrap());
+                        let result = arg1 - arg2;
+                        self.value_table.set_int(quad.result.unwrap(), result);
+                    } else if arg1_type == Type::Float && arg2_type == Type::Float {
+                        let arg1 = self.value_table.get_float(quad.arg1);
+                        let arg2 = self.value_table.get_float(quad.arg2.unwrap());
+                        let result = arg1 - arg2;
+                        self.value_table.set_float(quad.result.unwrap(), result);
+                    } else if arg1_type == Type::Int && arg2_type == Type::Float {
+                        let arg1 = self.value_table.get_int(quad.arg1);
+                        let arg2 = self.value_table.get_float(quad.arg2.unwrap());
+                        let result = arg1 as f32 - arg2;
+                        self.value_table.set_float(quad.result.unwrap(), result);
+                    } else if arg1_type == Type::Float && arg2_type == Type::Int {
+                        let arg1 = self.value_table.get_float(quad.arg1);
+                        let arg2 = self.value_table.get_int(quad.arg2.unwrap());
+                        let result = arg1 - arg2 as f32;
+                        self.value_table.set_float(quad.result.unwrap(), result);
+                    }
+                    self.instruction_pointer += 1;
+                }
+                QuadOperator::Multiply => {
+                    let arg1_type = self.value_table.get_var_type(quad.arg1);
+                    let arg2_type = self.value_table.get_var_type(quad.arg2.unwrap());
+
+                    if arg1_type == Type::Int && arg2_type == Type::Int {
+                        let arg1 = self.value_table.get_int(quad.arg1);
+                        let arg2 = self.value_table.get_int(quad.arg2.unwrap());
+                        let result = arg1 * arg2;
+                        self.value_table.set_int(quad.result.unwrap(), result);
+                    } else if arg1_type == Type::Float && arg2_type == Type::Float {
+                        let arg1 = self.value_table.get_float(quad.arg1);
+                        let arg2 = self.value_table.get_float(quad.arg2.unwrap());
+                        let result = arg1 * arg2;
+                        self.value_table.set_float(quad.result.unwrap(), result);
+                    } else if arg1_type == Type::Int && arg2_type == Type::Float {
+                        let arg1 = self.value_table.get_int(quad.arg1);
+                        let arg2 = self.value_table.get_float(quad.arg2.unwrap());
+                        let result = arg1 as f32 * arg2;
+                        self.value_table.set_float(quad.result.unwrap(), result);
+                    } else if arg1_type == Type::Float && arg2_type == Type::Int {
+                        let arg1 = self.value_table.get_float(quad.arg1);
+                        let arg2 = self.value_table.get_int(quad.arg2.unwrap());
+                        let result = arg1 * arg2 as f32;
+                        self.value_table.set_float(quad.result.unwrap(), result);
+                    }
+                    self.instruction_pointer += 1;
+                }
+                QuadOperator::Divide => {
+                    let arg1_type = self.value_table.get_var_type(quad.arg1);
+                    let arg2_type = self.value_table.get_var_type(quad.arg2.unwrap());
+
+                    if arg1_type == Type::Int && arg2_type == Type::Int {
+                        let arg1 = self.value_table.get_int(quad.arg1);
+                        let arg2 = self.value_table.get_int(quad.arg2.unwrap());
+                        let result = arg1 / arg2;
+                        self.value_table.set_int(quad.result.unwrap(), result);
+                    } else if arg1_type == Type::Float && arg2_type == Type::Float {
+                        let arg1 = self.value_table.get_float(quad.arg1);
+                        let arg2 = self.value_table.get_float(quad.arg2.unwrap());
+                        let result = arg1 / arg2;
+                        self.value_table.set_float(quad.result.unwrap(), result);
+                    } else if arg1_type == Type::Int && arg2_type == Type::Float {
+                        let arg1 = self.value_table.get_int(quad.arg1);
+                        let arg2 = self.value_table.get_float(quad.arg2.unwrap());
+                        let result = arg1 as f32 / arg2;
+                        self.value_table.set_float(quad.result.unwrap(), result);
+                    } else if arg1_type == Type::Float && arg2_type == Type::Int {
+                        let arg1 = self.value_table.get_float(quad.arg1);
+                        let arg2 = self.value_table.get_int(quad.arg2.unwrap());
+                        let result = arg1 / arg2 as f32;
+                        self.value_table.set_float(quad.result.unwrap(), result);
+                    }
+                    self.instruction_pointer += 1;
+                }
+                QuadOperator::GreaterThan => {
+                    let arg1_type = self.value_table.get_var_type(quad.arg1);
+                    let arg2_type = self.value_table.get_var_type(quad.arg2.unwrap());
+
+                    if arg1_type == Type::Int && arg2_type == Type::Int {
+                        let arg1 = self.value_table.get_int(quad.arg1);
+                        let arg2 = self.value_table.get_int(quad.arg2.unwrap());
+                        let result = arg1 > arg2;
+                        self.value_table.set_bool(quad.result.unwrap(), result);
+                    } else if arg1_type == Type::Float && arg2_type == Type::Float {
+                        let arg1 = self.value_table.get_float(quad.arg1);
+                        let arg2 = self.value_table.get_float(quad.arg2.unwrap());
+                        let result = arg1 > arg2;
+                        self.value_table.set_bool(quad.result.unwrap(), result);
+                    } else if arg1_type == Type::Int && arg2_type == Type::Float {
+                        let arg1 = self.value_table.get_int(quad.arg1);
+                        let arg2 = self.value_table.get_float(quad.arg2.unwrap());
+                        let result = arg1 as f32 > arg2;
+                        self.value_table.set_bool(quad.result.unwrap(), result);
+                    } else if arg1_type == Type::Float && arg2_type == Type::Int {
+                        let arg1 = self.value_table.get_float(quad.arg1);
+                        let arg2 = self.value_table.get_int(quad.arg2.unwrap());
+                        let result = arg1 > arg2 as f32;
+                        self.value_table.set_bool(quad.result.unwrap(), result);
+                    }
+                    self.instruction_pointer += 1;
+                }
+                QuadOperator::LessThan => {
+                    let arg1_type = self.value_table.get_var_type(quad.arg1);
+                    let arg2_type = self.value_table.get_var_type(quad.arg2.unwrap());
+
+                    if arg1_type == Type::Int && arg2_type == Type::Int {
+                        let arg1 = self.value_table.get_int(quad.arg1);
+                        let arg2 = self.value_table.get_int(quad.arg2.unwrap());
+                        let result = arg1 < arg2;
+                        self.value_table.set_bool(quad.result.unwrap(), result);
+                    } else if arg1_type == Type::Float && arg2_type == Type::Float {
+                        let arg1 = self.value_table.get_float(quad.arg1);
+                        let arg2 = self.value_table.get_float(quad.arg2.unwrap());
+                        let result = arg1 < arg2;
+                        self.value_table.set_bool(quad.result.unwrap(), result);
+                    } else if arg1_type == Type::Int && arg2_type == Type::Float {
+                        let arg1 = self.value_table.get_int(quad.arg1);
+                        let arg2 = self.value_table.get_float(quad.arg2.unwrap());
+                        let result = (arg1 as f32) < arg2;
+                        self.value_table.set_bool(quad.result.unwrap(), result);
+                    } else if arg1_type == Type::Float && arg2_type == Type::Int {
+                        let arg1 = self.value_table.get_float(quad.arg1);
+                        let arg2 = self.value_table.get_int(quad.arg2.unwrap());
+                        let result = arg1 < arg2 as f32;
+                        self.value_table.set_bool(quad.result.unwrap(), result);
+                    }
+                    self.instruction_pointer += 1;
+                }
+                QuadOperator::GotoF => {
+                    let var_value = self.value_table.get_bool(quad.arg1);
+                    if var_value == false {
+                        self.instruction_pointer = quad.arg2.unwrap();
+                        continue;
+                    }
+                    self.instruction_pointer += 1;
+                }
+                QuadOperator::Goto => self.instruction_pointer = quad.arg1,
+                QuadOperator::Assign => {
+                    let var_type = self.value_table.get_var_type(quad.arg1);
+                    let result_type = self.value_table.get_var_type(quad.arg2.unwrap());
+
+                    if var_type == Type::Int && result_type == Type::Int {
+                        let value = self.value_table.get_int(quad.arg2.unwrap());
+                        self.value_table.set_int(quad.arg1, value);
+                    } else if var_type == Type::Float && result_type == Type::Float {
+                        let value = self.value_table.get_float(quad.arg2.unwrap());
+                        self.value_table.set_float(quad.arg1, value);
+                    }
+                    self.instruction_pointer += 1;
+                }
+                QuadOperator::Print => {
+                    let var_type = self.value_table.get_var_type(quad.arg1);
+                    match var_type {
+                        Type::Int => {
+                            let value = self.value_table.get_int(quad.arg1);
+                            println!("{}", value);
+                        }
+                        Type::Float => {
+                            let value = self.value_table.get_float(quad.arg1);
+                            println!("{}", value);
+                        }
+                        Type::String => {
+                            let value = self.value_table.get_string(quad.arg1);
+                            println!("{}", value);
+                        }
+                        _ => {
+                            panic!(
+                                "Invalid Type for print statement at quad {}",
+                                self.instruction_pointer
+                            );
+                        }
+                    }
+                    self.instruction_pointer += 1;
+                }
+                _ => {
+                    panic!("Invalid operator");
+                }
+            }
+        }
+    }
 }

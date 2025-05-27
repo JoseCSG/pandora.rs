@@ -1,22 +1,37 @@
 program test_one;
-    var a, b, i :int;
-        e :float;
+    var b, i :int;
+        a, e :float;
+
+
 
 main {
-        if (i - 3 > (10 + 2) / 8) {
+        i = -2;
+        e = -2.1;
+        print(i);
+        print(e);
+
+
+        i = 4;
+        print(i);
+
+        if (i - 3 < 10 ) {
             print("i is less than 10");
         } else {
             i = 3 * (3 - 4) / 2;
             print("i is greater than 10");
         }
 
-        if (i > 2) {
-            while (i * 9 > (32 - 12) / 3) do {
-                a = i + 1 + 2.4 * 10;
+        i = 5;
+        print(i);
+
+        if (i < 4) {
+            while (i  < 20 ) do {
+                a = a + (i + 1 + 2.4 * 9);
+                i = i + 1; 
             }
+            print(a);
         }
 
-        print("Hello World!");
         print(a, 2 * 3);
     }
 end

@@ -1,7 +1,7 @@
+use std::collections::HashMap;
 use crate::compiler::tokens::{Token, LexicalError};
 use crate::compiler::semantic_cube;
 use crate::compiler::semantic_tables;
-use std::collections::HashMap;
 use crate::compiler::program_manager::ProgramManager;
 use crate::compiler::quadruplets::{QuadOperator, convert_semantic_op_to_quad_op};
 
@@ -57,18 +57,41 @@ Cte: () = {
       _ => panic!("Invalid constant"),
     };
 
-    let temp_address = program_manager.value_table.insert_cte_int(cte_val);
-    program_manager.operand_stack.push(temp_address);
-    program_manager.polish_vector.push(temp_address.to_string());
+    let address;
+
+    if program_manager.tabla_funciones.get("main").unwrap().vars.contains_key(&cte_val.to_string().clone()) {
+      address = program_manager.tabla_funciones.get_mut("main").unwrap().vars.get(&cte_val.to_string().clone()).unwrap().address;
+    } else {
+      address = program_manager.value_table.insert_cte_int(cte_val);
+      let cte_info = semantic_tables::VariableInfo 
+        { value: semantic_tables::VarValue::Int(cte_val), var_type: semantic_tables::VarType::Int,
+          name: cte_val.to_string().clone(), address: address  };
+      program_manager.tabla_funciones.get_mut("main").unwrap().vars.insert(cte_val.to_string(), cte_info);
+    }
+      program_manager.operand_stack.push(address);
+      program_manager.polish_vector.push(address.to_string());
   },
   <val: "float"> => {
     let cte_val = match val {
       Token::Float(ref num) => num.clone(),
       _ => panic!("Invalid constant"),
     };
-    let temp_address = program_manager.value_table.insert_cte_float(cte_val);
-    program_manager.operand_stack.push(temp_address);
-    program_manager.polish_vector.push(temp_address.to_string());
+
+    let address;
+
+    if program_manager.tabla_funciones.get("main").unwrap().vars.contains_key(&cte_val.to_string().clone()) {
+      address = program_manager.tabla_funciones.get_mut("main").unwrap().vars.get(&cte_val.to_string().clone()).unwrap().address;
+    } else {
+      address = program_manager.value_table.insert_cte_float(cte_val);
+      let cte_info = semantic_tables::VariableInfo 
+        { value: semantic_tables::VarValue::Float(cte_val), var_type: semantic_tables::VarType::Float,
+          name: cte_val.to_string().clone(), address: address  };
+
+      program_manager.tabla_funciones.get_mut("main").unwrap().vars.insert(cte_val.to_string(), cte_info);
+    }
+
+    program_manager.operand_stack.push(address);
+    program_manager.polish_vector.push(address.to_string());
   }
 }
 
@@ -120,14 +143,13 @@ OpLogico: semantic_cube::Operator = {
   },
 }
 
-//TODO: Build AST to return value
 pub Expresion: () = {
   <left: Exp> <op: OpLogico> <right: Exp> => {
     let right_address = program_manager.operand_stack.pop().unwrap();
     let left_address = program_manager.operand_stack.pop().unwrap();
     
-    let right_type = semantic_cube::Type::Int;  
-    let left_type = semantic_cube::Type::Int;
+    let right_type = program_manager.value_table.get_var_type(right_address);  
+    let left_type =  program_manager.value_table.get_var_type(left_address);
     let res_type = program_manager.cubo.get_type(left_type, op, right_type);
 
     let temp_address = match res_type {
@@ -141,7 +163,6 @@ pub Expresion: () = {
 
     program_manager.create_quad(quad_op, left_address, Some(right_address), Some(temp_address));
     program_manager.operand_stack.push(temp_address);
-    println!("Despues de expresion: {:?}", program_manager.operand_stack);
     program_manager.polish_vector.clear();
   },
   <exp: Exp> => {
@@ -154,8 +175,8 @@ Exp: () = {
     let right_address = program_manager.operand_stack.pop().unwrap();
     let left_address = program_manager.operand_stack.pop().unwrap();
 
-    let left_type = semantic_cube::Type::Int;
-    let right_type = semantic_cube::Type::Int;
+    let left_type = program_manager.value_table.get_var_type(left_address);
+    let right_type = program_manager.value_table.get_var_type(right_address);
     let res_type = program_manager.cubo.get_type(left_type, op, right_type);
 
     let temp_address = match res_type {
@@ -187,8 +208,8 @@ Termino: () = {
     let right_address = program_manager.operand_stack.pop().unwrap();
     let left_address = program_manager.operand_stack.pop().unwrap();
 
-    let left_type = semantic_cube::Type::Int;
-    let right_type = semantic_cube::Type::Int;
+    let left_type = program_manager.value_table.get_var_type(left_address);
+    let right_type = program_manager.value_table.get_var_type(right_address);
     let res_type = program_manager.cubo.get_type(left_type, op, right_type);
 
     let temp_address = match res_type {
@@ -215,6 +236,11 @@ Termino: () = {
   }
 }
 
+NegativeSign: Option<()> = {
+  "-" => Some(()),
+  => None,
+}
+
 Factor: () = {
   "(" <exp: Expresion> ")" => exp,
   <val: Id> => {
@@ -226,8 +252,32 @@ Factor: () = {
       semantic_tables::VarType::Float => semantic_cube::Type::Float,
     };
   },
-  <val: Cte> => {
+  <negative_sign:NegativeSign> <val: Cte> => {
+      if negative_sign.is_some() {
+        //Checar si existe -1 sino
+        let negative_address;
+        if program_manager.tabla_funciones.get("main").unwrap().vars.contains_key("-1") {
+          negative_address = program_manager.tabla_funciones.get("main").unwrap().vars.get("-1").unwrap().address;
+        } else {
+          negative_address = program_manager.value_table.insert_cte_int(-1);
+          let negative_var_info = semantic_tables::VariableInfo {
+            name: "-1".to_string(),
+            address: negative_address,
+            value: semantic_tables::VarValue::Int(-1),
+            var_type: semantic_tables::VarType::Float  
+          };
+          program_manager.tabla_funciones.get_mut("main").unwrap().vars.insert("-1".to_string(), negative_var_info);
+        }
 
+
+        let address = program_manager.operand_stack.pop().unwrap();
+        let op_type = program_manager.value_table.get_var_type(address);
+
+        let temp_address = program_manager.new_temp(op_type);
+        program_manager.create_quad(QuadOperator::Multiply, negative_address, Some(address), Some(temp_address));
+        program_manager.operand_stack.push(temp_address);
+
+      }
   }
 }
 
@@ -243,6 +293,17 @@ Assign: () = {
   <id: Id> "=" <exp: Expresion> ";" => {
     let var_info = program_manager.tabla_funciones.get("main").unwrap().vars.get(&id).unwrap();
     let temp_address = program_manager.operand_stack.pop().unwrap();
+
+    let temp_type = program_manager.value_table.get_var_type(temp_address);
+    let var_type = match var_info.var_type {
+      semantic_tables::VarType::Int => semantic_cube::Type::Int,
+      semantic_tables::VarType::Float => semantic_cube::Type::Float,
+    };
+
+    if temp_type != var_type {
+      panic!("Types must be the same to assign values");
+    };
+
     program_manager.create_quad(QuadOperator::Assign, var_info.address, Some(temp_address), None);
     program_manager.polish_vector.clear();
   },
@@ -382,7 +443,7 @@ VarsPrime: Vec<semantic_tables::VariableInfo> = {
         semantic_cube::Type::Float => semantic_tables::VarType::Float,
         _ => panic!("Invalid type"),
       };
-      let var_info: semantic_tables::VariableInfo = semantic_tables::VariableInfo 
+      let var_info = semantic_tables::VariableInfo 
         { value: match _var_type {
           semantic_tables::VarType::Int => semantic_tables::VarValue::Int(0),
           semantic_tables::VarType::Float => semantic_tables::VarValue::Float(0.0),
@@ -438,7 +499,7 @@ Funcs: () = {
 
       let address = program_manager.value_table.insert_integer(0, "local");
 
-      let var_info: semantic_tables::VariableInfo = semantic_tables::VariableInfo 
+      let var_info = semantic_tables::VariableInfo 
         { value: match param.var_type {
           semantic_tables::VarType::Int => semantic_tables::VarValue::Int(0),
           semantic_tables::VarType::Float => semantic_tables::VarValue::Float(0.0),
@@ -475,9 +536,8 @@ VarsProgram: () = {
   },
 }
 
-pub Program: String = {
+pub Program: () = {
   "program" <id: Id> ";" <vars: VarsProgram> <funcs: Funcs*> <st_main: "main">  <body: Body>  <end: "end"> => {
-    program_manager.quadruplets.print_elements();
-    format!("Program exit with value {}", 0)
+    println!("Program exit with value {}", 0)
   },
 }

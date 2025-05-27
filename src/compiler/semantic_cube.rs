@@ -5,6 +5,7 @@ pub enum Type {
     Int,
     Float,
     Bool,
+    String,
     Error,
 }
 
@@ -75,6 +76,12 @@ impl CuboSemantico {
 
         res_operaciones.insert((Type::Int, Operator::NotEqual, Type::Float), Type::Bool);
         res_operaciones.insert((Type::Float, Operator::NotEqual, Type::Int), Type::Bool);
+
+        // Operaciones entre booleanos
+        res_operaciones.insert((Type::Bool, Operator::GreaterThan, Type::Bool), Type::Bool);
+        res_operaciones.insert((Type::Bool, Operator::LessThan, Type::Bool), Type::Bool);
+
+        // Operaciones invalidas
 
         res_operaciones.insert((Type::Bool, Operator::Add, Type::Int), Type::Error);
         res_operaciones.insert((Type::Bool, Operator::Multiply, Type::Int), Type::Error);

@@ -1,5 +1,9 @@
 # Documentación del lenguaje
 
+## Maquina virtual
+
+En esta entrega no se crearon nuevos estatutos. Estuve trabajando en la maquina virtual. Actualmente, el programa soporta estatutos while, e if. Puede hacer operaciones e iteraciones. Las funciones están pendientes para la siguiente entrega.
+
 ## Creación de cuadruplos para estatutos While E If
 
 Se añadio un nuevo stack a la clase ProgramManager llamado jumps_stack, el cual guarda la posicion para los estatutos no completos (GOTOF, GOTO) para los estatutos **If** Y **While**.
