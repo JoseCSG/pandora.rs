@@ -1,60 +1,37 @@
 program test_one;
-    var b, i :int;
+    var b, i, fact, primer_numero, segundo_numero, temp :int;
         a, e :float;
 
-    void suerte(a: int, b:float, t:int)[
-        var test, algo :float;
-            p, d :int;
+    void fibonacci(n: int) [
+        var primer_numero, segundo_numero, temp: int;
         {
-            print(a);
-            algo = 1.2 + 43 * e + a;
-            print("Dentro de funcion suete");
-            print(algo);
+            segundo_numero = 1;
+            while (n > 0) do {
+                temp = primer_numero + segundo_numero;
+                primer_numero = segundo_numero;
+                segundo_numero = temp;
+                n = n - 1;
+            }
+            print(segundo_numero);
+
         }
     ];
-    
-    void suerte2()[
-        var test, algo :float;
-            i :int;
-        {
-            i = 0;
-            algo = 1.2 + 43 * e;
-            print("Dentro de funcion suerte 2");
 
-            print(algo);
+    
+    void factorial(n: int) [
+        {
+            fact = 1;
+            while (n > 0) do {
+                fact = fact * n;
+                n = n - 1;
+            }
         }
     ];
 
 main {
-        i = -2;
-        e = -2.1;
-        print(i);
-        print(e);
 
-        i = 4;
-        print(i);
-        a = 3.4;
-
-        suerte(999, 2.3, 5);
-        print(a, i);
-        if (i - 3 < 10 ) {
-            print("i is less than 10");
-        } else {
-            i = 3 * (3 - 4) / 2;
-            print("i is greater than 10");
-        }
-
-        i = 5;
-        print(i);
-
-        if (i < 4) {
-            while (i  < 20 ) do {
-                a = a + (i + 1 + 2.4 * 9);
-                i = i + 1; 
-            }
-            print(a);
-        }
-        
-        print(a, 2 * 3);
+        factorial(10);
+        print("Factorial de ", 10, " es: ", fact);
+        fibonacci(20);
     }
 end

@@ -286,7 +286,7 @@ Factor: () = {
         program_manager.operand_stack.push(temp_address);
 
       }
-  }
+  },
 }
 
 Statement: () = {
@@ -337,12 +337,22 @@ ExpList: () = {
   => {}
 }
 
+PrintItem: () = {
+  CteString,
+  Expresion,
+}
 
 PrintPrime: () = {
-  CteString,
-  ExpList => {
-    program_manager.polish_vector.clear();
-  },
+  <PrintItem> <("," <PrintItem>)*> => {
+  let mut temp_queue = Queue::new();
+    while program_manager.operand_stack.len() != 0 {
+      let temp_address = program_manager.operand_stack.pop().unwrap();
+      temp_queue.push(temp_address);
+    }
+    while temp_queue.len() != 0 {
+      program_manager.operand_stack.push(temp_queue.pop().unwrap());
+    }
+  }
 }
 
 Print: () = {

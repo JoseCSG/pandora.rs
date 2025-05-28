@@ -442,21 +442,37 @@ impl ProgramManager {
                 }
                 QuadOperator::Print => {
                     let var_type = self.value_table.get_var_type(quad.arg1);
+                    let next_quad_op = convert_quad_op_to_code(
+                        self.quadruplets
+                            .get(self.instruction_pointer + 1)
+                            .unwrap()
+                            .operator,
+                    );
+
                     match var_type {
                         Type::Int => {
                             let value =
                                 self.value_table.get_int(quad.arg1, self.memory_stack.top());
-                            println!("{}", value);
+                            match next_quad_op {
+                                QuadOperator::Print => print!("{}", value),
+                                _ => println!("{}", value),
+                            }
                         }
                         Type::Float => {
                             let value = self
                                 .value_table
                                 .get_float(quad.arg1, self.memory_stack.top());
-                            println!("{}", value);
+                            match next_quad_op {
+                                QuadOperator::Print => print!("{}", value),
+                                _ => println!("{}", value),
+                            }
                         }
                         Type::String => {
                             let value = self.value_table.get_string(quad.arg1);
-                            println!("{}", value);
+                            match next_quad_op {
+                                QuadOperator::Print => print!("{}", value),
+                                _ => println!("{}", value),
+                            }
                         }
                         _ => {
                             panic!(
