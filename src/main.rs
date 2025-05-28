@@ -26,8 +26,7 @@ fn main() {
     let mut program_manager = ProgramManager::new();
 
     parser.parse(&mut program_manager, lexer);
-    /*     program_manager.quadruplets.print_elements();
-    println!("{:?}", program_manager.value_table); */
-    //println!("{:?}", program_manager.tabla_funciones);
+    println!("{:?}", program_manager.tabla_funciones);
+    program_manager.quadruplets.print_elements();
     program_manager.run_program();
 }

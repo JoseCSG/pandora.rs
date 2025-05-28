@@ -25,7 +25,11 @@ impl Display for Quadruplet {
             10 => "<",
             11 => "!=",
             12 => "print",
-            13 => "END",
+            13 => "MEMORY",
+            14 => "PARAM",
+            15 => "GOSUB",
+            16 => "ENDFUNC",
+            17 => "ENDPROGRAM",
             _ => "UNKNOWN",
         };
 
@@ -60,6 +64,10 @@ pub enum QuadOperator {
     LessThan,
     NotEqual,
     Print,
+    Memory,
+    GoSub,
+    Param,
+    EndFunc,
     EndProgram,
 }
 
@@ -151,7 +159,11 @@ pub fn convert_quad_op_to_code(op: i32) -> QuadOperator {
         10 => QuadOperator::LessThan,
         11 => QuadOperator::NotEqual,
         12 => QuadOperator::Print,
-        13 => QuadOperator::EndProgram,
+        13 => QuadOperator::Memory,
+        14 => QuadOperator::Param,
+        15 => QuadOperator::GoSub,
+        16 => QuadOperator::EndFunc,
+        17 => QuadOperator::EndProgram,
         _ => panic!("Invalid operator"),
     }
 }

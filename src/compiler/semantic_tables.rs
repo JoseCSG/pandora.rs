@@ -32,6 +32,8 @@ pub struct FunctionInfo {
     pub name: String,
     pub params: Vec<FunctionParam>,
     pub vars: VariableTable,
+    pub vars_amount: Vec<i32>,
+    pub start_address: i32,
 }
 
 pub type VariableTable = HashMap<String, VariableInfo>;

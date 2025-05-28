@@ -2,7 +2,31 @@ program test_one;
     var b, i :int;
         a, e :float;
 
-
+    void suerte(a: int, b:float, t:int)[
+        var test, algo :float;
+            p, d :int;
+        {
+            a = 10;
+            algo = 1.2 + 43 * e + a;
+            print("Dentro de funcion suete");
+            print(algo);
+        }
+    ];
+    
+    void suerte2()[
+        var test, algo :float;
+            i :int;
+        {
+            i = 0;
+            algo = 1.2 + 43 * e;
+            print("Dentro de funcion suerte 2");
+            while (i < 5) do {
+                suerte();
+                i = i + 1;
+            }
+            print(algo);
+        }
+    ];
 
 main {
         i = -2;
@@ -10,10 +34,12 @@ main {
         print(i);
         print(e);
 
-
         i = 4;
         print(i);
+        a = 3.4;
 
+        suerte2();
+        print(a, i);
         if (i - 3 < 10 ) {
             print("i is less than 10");
         } else {
@@ -31,7 +57,7 @@ main {
             }
             print(a);
         }
-
+        
         print(a, 2 * 3);
     }
 end

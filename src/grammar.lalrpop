@@ -4,6 +4,7 @@ use crate::compiler::semantic_cube;
 use crate::compiler::semantic_tables;
 use crate::compiler::program_manager::ProgramManager;
 use crate::compiler::quadruplets::{QuadOperator, convert_semantic_op_to_quad_op};
+use crate::utils::queue::{Queue};
 
 grammar<'input>(program_manager: &'input mut ProgramManager);
 
@@ -244,7 +245,15 @@ NegativeSign: Option<()> = {
 Factor: () = {
   "(" <exp: Expresion> ")" => exp,
   <val: Id> => {
-    let var_info = program_manager.tabla_funciones.get("main").unwrap().vars.get(&val).unwrap();
+    let current_function = program_manager.curr_function.top().unwrap();
+
+    let var_info = match program_manager.tabla_funciones.get(current_function.as_str()).unwrap().vars.get(&val) {
+      Some(info) => info,
+      None => match program_manager.tabla_funciones.get("main").unwrap().vars.get(&val) {
+        Some(info) => info,
+        None => panic!("There's no variable {}", val),
+      }
+    };
     program_manager.operand_stack.push(var_info.address);
     program_manager.polish_vector.push(var_info.name.clone());
     let var_type = match var_info.var_type {
@@ -254,7 +263,6 @@ Factor: () = {
   },
   <negative_sign:NegativeSign> <val: Cte> => {
       if negative_sign.is_some() {
-        //Checar si existe -1 sino
         let negative_address;
         if program_manager.tabla_funciones.get("main").unwrap().vars.contains_key("-1") {
           negative_address = program_manager.tabla_funciones.get("main").unwrap().vars.get("-1").unwrap().address;
@@ -291,7 +299,13 @@ Statement: () = {
 
 Assign: () = {
   <id: Id> "=" <exp: Expresion> ";" => {
-    let var_info = program_manager.tabla_funciones.get("main").unwrap().vars.get(&id).unwrap();
+    let var_info = match program_manager.tabla_funciones.get(program_manager.curr_function.top().unwrap().as_str()).unwrap().vars.get(&id) {
+      Some(info) => info,
+      None => match program_manager.tabla_funciones.get("main").unwrap().vars.get(&id) {
+        Some(info) => info,
+        None => panic!("There's no variable {}", id),
+      }
+    };
     let temp_address = program_manager.operand_stack.pop().unwrap();
 
     let temp_type = program_manager.value_table.get_var_type(temp_address);
@@ -311,7 +325,16 @@ Assign: () = {
 
 ExpList: () = {
   <start: Expresion> <rest: ("," <Expresion>)*> => {
-  }
+    let mut temp_queue = Queue::new();
+    while program_manager.operand_stack.len() != 0 {
+      let temp_address = program_manager.operand_stack.pop().unwrap();
+      temp_queue.push(temp_address);
+    }
+    while temp_queue.len() != 0 {
+      program_manager.operand_stack.push(temp_queue.pop().unwrap());
+    }
+  },
+  => {}
 }
 
 
@@ -393,9 +416,44 @@ Condition: () = {
   }
 }
 
-FCall: () = {
-  <id: Id> "(" <args: ExpList> ")" ";" => {
+StartFCall: () = {
+  <id: Id> => {
+    let function_id = *program_manager
+      .function_ids
+      .iter()
+      .find(|(_, v)| **v == id.clone())  
+      .map(|(k, _)| k)           
+      .unwrap();                 
 
+    program_manager.create_quad(QuadOperator::Memory, function_id, None, None);
+    program_manager.curr_function.push(id);
+  }
+}
+
+EndFCall: () = {
+  ";" => {
+    let function_id = *program_manager
+      .function_ids
+      .iter()
+      .find(|(_, v)| **v == *program_manager.curr_function.top().unwrap())  
+      .map(|(k, _)| k)           
+      .unwrap();                 
+
+    program_manager.create_quad(QuadOperator::GoSub, function_id, None, None);
+    program_manager.curr_function.pop();
+  }
+}
+
+FCallParameters: () = {
+  "(" <args: ExpList> ")" => {
+
+
+  }
+}
+
+
+FCall: () = {
+  <function_id: StartFCall> <function_parameters: FCallParameters>  <end_fn:EndFCall> => {
   },
 }
 
@@ -433,9 +491,13 @@ VarsPrime: Vec<semantic_tables::VariableInfo> = {
     let mut variables_info = vec![];
     for id in ids {
       let id_value = id.clone();
+      let var_scope = match program_manager.curr_function.top().unwrap().as_str() {
+        "main" => "global".to_string(),
+        _ => "local".to_string(),
+      };
       let address = match val {
-        semantic_cube::Type::Int => program_manager.value_table.insert_integer(0, "global"),
-        semantic_cube::Type::Float => program_manager.value_table.insert_float(0.0, "global"),
+        semantic_cube::Type::Int => program_manager.value_table.insert_integer(0, &var_scope),
+        semantic_cube::Type::Float => program_manager.value_table.insert_float(0.0, &var_scope),
         _ => panic!("Invalid type"),
       };
       let _var_type: semantic_tables::VarType = match val {
@@ -478,6 +540,9 @@ Params: Vec<semantic_tables::FunctionParam> = {
     }
     param_vector
   },
+  => {
+    Vec::new()
+  }
 }
 
 FunctionId: String = {
@@ -485,38 +550,70 @@ FunctionId: String = {
     if program_manager.tabla_funciones.contains_key(&id) {
       panic!("Function Id: {} already registered", id);
     }
+    program_manager.curr_function.push(id.clone());
+    *program_manager.value_table.counters.entry(String::from("function_ids")).or_insert(-1) += 1;
+    program_manager.function_ids.insert(*program_manager.value_table.counters.get("function_ids").unwrap_or(&0) as i32, id.clone());
+    program_manager.jumps_stack.push(program_manager.instruction_pointer);
+
     id
   }
 }
 
-Funcs: () = {
-  "void" <id: FunctionId> "(" <_params: Params> ")" "[" <vars: Vars?> <body:Body> "]" ";" => {
-    let mut temp_tabla_vars: HashMap<String, semantic_tables::VariableInfo> = HashMap::new();
-    for param in &_params {
-      if temp_tabla_vars.contains_key(&param.name) {
-        panic!("Variable {} is already declared in the params of the function {}", param.name, id.to_string());
+EndFunction: () = {
+  ";" => {
+    program_manager.create_quad(QuadOperator::EndFunc, 0, None, None);
+    program_manager.curr_function.pop();
+  }
+}
+
+FunctionParams: () = {
+  "(" <_params: Params> ")" => {
+      let mut temp_tabla_vars: HashMap<String, semantic_tables::VariableInfo> = HashMap::new();
+      for param in &_params {
+        if temp_tabla_vars.contains_key(&param.name) {
+          panic!("Variable {} is already declared in the params of the function {}", param.name, program_manager.curr_function.top().unwrap());
+        }
+
+        let address = program_manager.value_table.insert_integer(0, "local");
+
+        let var_info = semantic_tables::VariableInfo 
+          { value: match param.var_type {
+            semantic_tables::VarType::Int => semantic_tables::VarValue::Int(0),
+            semantic_tables::VarType::Float => semantic_tables::VarValue::Float(0.0),
+          }, var_type: param.var_type.clone(), name: param.name.clone(), address: address  };
+          temp_tabla_vars.insert(param.name.clone(), var_info);
       }
 
-      let address = program_manager.value_table.insert_integer(0, "local");
+    program_manager.tabla_funciones.insert(program_manager.curr_function.top().unwrap().clone(), 
+      semantic_tables::FunctionInfo { 
+          name: program_manager.curr_function.top().unwrap().to_string(), params: _params, 
+          vars: temp_tabla_vars, vars_amount: vec![0,0],
+          start_address: program_manager.jumps_stack.pop().unwrap()
+          });
+  }
+}
 
-      let var_info = semantic_tables::VariableInfo 
-        { value: match param.var_type {
-          semantic_tables::VarType::Int => semantic_tables::VarValue::Int(0),
-          semantic_tables::VarType::Float => semantic_tables::VarValue::Float(0.0),
-        }, var_type: param.var_type.clone(), name: param.name.clone(), address: address  };
-        temp_tabla_vars.insert(param.name.clone(), var_info);
-    }
+FunctionVars: () = {
+   <vars: Vars?> => {
+    let func_table = & mut program_manager.tabla_funciones.get_mut(program_manager.curr_function.top().unwrap().as_str()).unwrap();
     
     for var in vars.unwrap_or(vec![]) {
       for var_info in var {
-        if temp_tabla_vars.contains_key(&var_info.name) {
+        if func_table.vars.contains_key(&var_info.name) {
           panic!("Variable {} is already declared either in the params or in the function", var_info.name);
         }
 
-        temp_tabla_vars.insert(var_info.name.clone(), var_info.clone());
+        func_table.vars.insert(var_info.name.clone(), var_info.clone());
       }
     }
-    program_manager.tabla_funciones.insert(id.to_string(), semantic_tables::FunctionInfo { name: id.to_string(), params: _params, vars: temp_tabla_vars });
+    func_table.vars_amount[0] = *program_manager.value_table.counters.get("int_local").unwrap_or(&0) as i32;
+    func_table.vars_amount[1] = *program_manager.value_table.counters.get("float_local").unwrap_or(&0) as i32;
+    program_manager.value_table.clear_local_vars();
+   }
+}
+
+Funcs: () = {
+  "void" <id: FunctionId>  <func_params: FunctionParams> "[" <func_vars: FunctionVars> <body:Body> "]" <end_func: EndFunction> => {
   },
 }
 
@@ -532,12 +629,30 @@ VarsProgram: () = {
       }
     }
 
-    program_manager.tabla_funciones.insert("main".to_string(), semantic_tables::FunctionInfo { name: "main".to_string(), params: vec![], vars: temp_tabla_vars.clone() });
+    program_manager.tabla_funciones.insert("main".to_string(), 
+      semantic_tables::FunctionInfo { 
+          name: "main".to_string(), params: vec![], 
+          vars: temp_tabla_vars.clone(), vars_amount: vec![],
+          start_address: 0
+           });
   },
 }
 
+StartProgram: () = {
+  "program" <id: Id> ";" => {
+    program_manager.curr_function.push(String::from("main"));
+    program_manager.create_quad(QuadOperator::Goto, 0, None, None);
+  }
+}
+
+StartMain: () = {
+  "main" => {
+    program_manager.fill_quad(0, program_manager.instruction_pointer);
+  }
+}
+
 pub Program: () = {
-  "program" <id: Id> ";" <vars: VarsProgram> <funcs: Funcs*> <st_main: "main">  <body: Body>  <end: "end"> => {
-    println!("Program exit with value {}", 0)
+  <start_program: StartProgram> <vars: VarsProgram> <funcs: Funcs*> <st_main: StartMain>  <body: Body>  <end: "end"> => {
+    program_manager.create_quad(QuadOperator::EndProgram, 0, None, None);
   },
 }

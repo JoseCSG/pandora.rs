@@ -26,6 +26,10 @@ impl<T> Stack<T> {
         }
     }
 
+    pub fn top_mut(&mut self) -> Option<&mut T> {
+        self.top.as_mut().map(|node| &mut node.value)
+    }
+
     pub fn top(&self) -> Option<&T> {
         self.top.as_ref().map(|node| &node.value)
     }
