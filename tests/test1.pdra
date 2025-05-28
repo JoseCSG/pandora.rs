@@ -6,7 +6,7 @@ program test_one;
         var test, algo :float;
             p, d :int;
         {
-            a = 10;
+            print(a);
             algo = 1.2 + 43 * e + a;
             print("Dentro de funcion suete");
             print(algo);
@@ -20,10 +20,7 @@ program test_one;
             i = 0;
             algo = 1.2 + 43 * e;
             print("Dentro de funcion suerte 2");
-            while (i < 5) do {
-                suerte();
-                i = i + 1;
-            }
+
             print(algo);
         }
     ];
@@ -38,7 +35,7 @@ main {
         print(i);
         a = 3.4;
 
-        suerte2();
+        suerte(999, 2.3, 5);
         print(a, i);
         if (i - 3 < 10 ) {
             print("i is less than 10");

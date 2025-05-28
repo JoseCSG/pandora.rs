@@ -7,7 +7,7 @@ use core::panic;
 use std::collections::HashMap;
 
 use super::quadruplets::{convert_quad_op_to_code, QuadOperator};
-use super::value_table::{Memory, Value, LOCAL_VALUES, START_FLOAT_VALUES, START_INT_VALUES};
+use super::value_table::{Memory, Value};
 
 pub struct ProgramManager {
     pub cubo: CuboSemantico,
@@ -480,6 +480,26 @@ impl ProgramManager {
                         ],
                     };
                     self.memory_stack.push(curr_memory);
+                }
+                QuadOperator::Param => {
+                    if quad.arg2.unwrap() >= 5000 {
+                        let var_value = self
+                            .value_table
+                            .get_float(quad.arg1, self.memory_stack.top());
+                        self.value_table.set_float(
+                            quad.arg2.unwrap(),
+                            var_value,
+                            self.memory_stack.top_mut(),
+                        );
+                    } else {
+                        let var_value =
+                            self.value_table.get_int(quad.arg1, self.memory_stack.top());
+                        self.value_table.set_int(
+                            quad.arg2.unwrap(),
+                            var_value,
+                            self.memory_stack.top_mut(),
+                        );
+                    }
                 }
                 QuadOperator::GoSub => {
                     let function_name = self.function_ids.get(&quad.arg1).unwrap();

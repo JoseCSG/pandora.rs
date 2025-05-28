@@ -446,8 +446,39 @@ EndFCall: () = {
 
 FCallParameters: () = {
   "(" <args: ExpList> ")" => {
+    let curr_function = &program_manager.curr_function.top().unwrap();
+    let params_info = &program_manager.tabla_funciones.get(&curr_function.to_string()).unwrap().params;
+    if params_info.len() != program_manager.operand_stack.len() {
+      panic!("Argument quantities doesn't match with function {} declaration", curr_function);
+    }
 
+    let mut i = 0;
+    let mut param_queue = Queue::new();
+    while program_manager.operand_stack.len() != 0 {
+      let curr_param = &params_info[i];
+      let param_address = {
+        let func_info = program_manager.tabla_funciones.get(&curr_function.to_string()).unwrap();
+        func_info.vars.get(&curr_param.name).unwrap().address
+      };     
+      let curr_op = program_manager.operand_stack.pop().unwrap();
+      let op_type = match program_manager.value_table.get_var_type(curr_op) {
+        semantic_cube::Type::Int => semantic_tables::VarType::Int,
+        semantic_cube::Type::Float => semantic_tables::VarType::Float,
+        _ => panic!("Wrong type for parameter function"),
+      };
 
+      if op_type != curr_param.var_type {
+        panic!("Argument and parameters are not the same type on function {}", curr_function);
+      }
+
+      param_queue.push((curr_op, param_address));
+      i += 1;
+    }
+
+    while param_queue.len() != 0 {
+      let values = param_queue.pop().unwrap();
+      program_manager.create_quad(QuadOperator::Param, values.0, Some(values.1), None);
+    }
   }
 }
 
@@ -574,7 +605,12 @@ FunctionParams: () = {
           panic!("Variable {} is already declared in the params of the function {}", param.name, program_manager.curr_function.top().unwrap());
         }
 
-        let address = program_manager.value_table.insert_integer(0, "local");
+        let address;
+        if param.var_type == semantic_tables::VarType::Int {
+          address =  program_manager.value_table.insert_integer(0, "local");
+        } else {
+          address =  program_manager.value_table.insert_float(0.0, "local");
+        }
 
         let var_info = semantic_tables::VariableInfo 
           { value: match param.var_type {
