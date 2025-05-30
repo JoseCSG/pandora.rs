@@ -1,10 +1,19 @@
 program test_one;
-    var b, i, fact, primer_numero, segundo_numero, temp :int;
+    var b, i, fact, primer_numero, segundo_numero, temp, n, max_num_fact :int;
         a, e :float;
+
+    void get_area_circle(r:float)[
+        var pi:float;
+        {
+            pi = 3.1416;
+            print(r * r * pi);
+        }
+    ];
 
     void fibonacci(n: int) [
         var primer_numero, segundo_numero, temp: int;
         {
+            print("Fibonacci con valor de n: ", n);
             segundo_numero = 1;
             while (n > 0) do {
                 temp = primer_numero + segundo_numero;
@@ -13,25 +22,44 @@ program test_one;
                 n = n - 1;
             }
             print(segundo_numero);
-
         }
     ];
 
-    
-    void factorial(n: int) [
+    void pelos(algo: int) [
         {
-            fact = 1;
-            while (n > 0) do {
+            print("Dentro de pelos con valor: ", algo);
+            fibonacci(algo);
+        }
+    ];
+
+    void factorial(n:int, max_num_fact: int) [
+        {
+            if (n != max_num_fact + 1) {
                 fact = fact * n;
-                n = n - 1;
+                n = n + 1;
+                factorial(n, max_num_fact);
             }
         }
     ];
 
 main {
-
-        factorial(10);
-        print("Factorial de ", 10, " es: ", fact);
+        fact = 1;
+        n = 1;
+        max_num_fact = 10;
+        factorial(1, 13);
+        print("Factorial de ", 13, " es: ", fact);
         fibonacci(20);
+        get_area_circle(5.6);
+        n = 10;
+        
+        segundo_numero = 1;
+        while (n > 0) do {
+            temp = primer_numero + segundo_numero;
+            primer_numero = segundo_numero;
+            segundo_numero = temp;
+            n = n - 1;
+        }
+        n = 5;
+        pelos(n);
     }
 end

@@ -13,15 +13,15 @@ const TEMP_VALUES: i32 = 2000;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Value {
-    Int(i32),
-    Float(f32),
+    Int(i64),
+    Float(f64),
     Bool(bool),
 }
 
 #[derive(Debug, Clone, PartialEq)]
 enum ConstValue {
-    Int(i32),
-    Float(f32),
+    Int(i64),
+    Float(f64),
     String(String),
 }
 
@@ -55,7 +55,7 @@ impl ValueTable {
         }
     }
 
-    pub fn insert_integer(&mut self, value: i32, scope: &str) -> i32 {
+    pub fn insert_integer(&mut self, value: i64, scope: &str, memory: Option<&Memory>) -> i32 {
         let key = format!("int_{}", scope);
         let offset = match scope {
             "global" => START_INT_VALUES,
@@ -77,7 +77,9 @@ impl ValueTable {
                 *self.counters.get(&key).unwrap_or(&0) as i32 + offset
             }
             "temp" => {
-                self.var_values.values[0][array_index].push(Value::Int(value));
+                if memory.is_none() {
+                    self.var_values.values[0][array_index].push(Value::Int(value));
+                }
                 *self.counters.get(&key).unwrap_or(&0) as i32 + offset
             }
             "local" => *self.counters.get(&key).unwrap_or(&0) as i32 + offset,
@@ -90,8 +92,7 @@ impl ValueTable {
 
         address
     }
-
-    pub fn insert_float(&mut self, value: f32, scope: &str) -> i32 {
+    pub fn insert_float(&mut self, value: f64, scope: &str, memory: Option<&Memory>) -> i32 {
         let key = format!("float_{}", scope);
         let offset = match scope {
             "global" => START_FLOAT_VALUES,
@@ -107,13 +108,17 @@ impl ValueTable {
             _ => panic!("Invalid scope"),
         };
 
+        //TODO: Change this to store only the counters and create the space for main when finishing the program
+
         let address = match scope {
             "global" => {
                 self.var_values.values[1][array_index].push(Value::Float(value));
                 *self.counters.get(&key).unwrap_or(&0) as i32 + offset
             }
             "temp" => {
-                self.var_values.values[1][array_index].push(Value::Float(value));
+                if memory.is_none() {
+                    self.var_values.values[1][array_index].push(Value::Float(value));
+                }
                 *self.counters.get(&key).unwrap_or(&0) as i32 + offset
             }
             "local" => *self.counters.get(&key).unwrap_or(&0) as i32 + offset,
@@ -129,22 +134,28 @@ impl ValueTable {
 
     pub fn clear_local_vars(&mut self) {
         *self.counters.entry("int_local".to_string()).or_insert(0) = 0;
+        *self.counters.entry("int_temp".to_string()).or_insert(0) = 0;
         *self.counters.entry("float_local".to_string()).or_insert(0) = 0;
+        *self.counters.entry("float_temp".to_string()).or_insert(0) = 0;
+        *self.counters.entry("bool_temp".to_string()).or_insert(0) = 0;
     }
 
-    pub fn insert_bool(&mut self, value: bool) -> i32 {
-        let address = self.var_values.values[2][0].len() as i32 + START_BOOL_VALUES;
-        self.var_values.values[2][0].push(Value::Bool(value));
+    pub fn insert_bool(&mut self, value: bool, memory: Option<&Memory>) -> i32 {
+        let address = *self.counters.get("bool_temp").unwrap_or(&0) as i32 + START_BOOL_VALUES;
+        if memory.is_none() {
+            self.var_values.values[2][0].push(Value::Bool(value));
+        }
+        *self.counters.entry("bool_temp".to_string()).or_insert(0) += 1;
         address
     }
 
-    pub fn insert_cte_int(&mut self, value: i32) -> i32 {
+    pub fn insert_cte_int(&mut self, value: i64) -> i32 {
         let address = self.const_values[0].len() as i32 + START_CONST_INT_VALUES;
         self.const_values[0].push(ConstValue::Int(value));
         address
     }
 
-    pub fn insert_cte_float(&mut self, value: f32) -> i32 {
+    pub fn insert_cte_float(&mut self, value: f64) -> i32 {
         let address = self.const_values[1].len() as i32 + START_CONST_FLOAT_VALUES;
         self.const_values[1].push(ConstValue::Float(value));
         address
@@ -164,7 +175,7 @@ impl ValueTable {
         }
     }
 
-    pub fn get_int(&self, address: i32, memory: Option<&Memory>) -> i32 {
+    pub fn get_int(&self, address: i32, memory: Option<&Memory>) -> i64 {
         let mut array_index = 0;
         let mut position = address - START_INT_VALUES;
         let mut int_type = "var";
@@ -200,27 +211,34 @@ impl ValueTable {
         }
     }
 
-    pub fn set_int(&mut self, address: i32, value: i32, memory: Option<&mut Memory>) {
+    pub fn set_int(&mut self, address: i32, value: i64, memory: Option<&mut Memory>) {
         let mut array_index = 0;
         let mut position = address - START_INT_VALUES;
         if address >= START_INT_VALUES + LOCAL_VALUES && address < START_INT_VALUES + TEMP_VALUES {
             array_index = 0;
             position = position - LOCAL_VALUES;
-            match memory {
-                Some(val) => {
-                    val.values[0][array_index][position as usize] = Value::Int(value);
-                }
-                None => {}
-            }
-            return;
         } else if address >= START_INT_VALUES + TEMP_VALUES {
             array_index = 1;
             position = position - TEMP_VALUES;
         }
-        self.var_values.values[0][array_index][position as usize] = Value::Int(value);
+
+        match memory {
+            Some(val) => {
+                if address >= START_INT_VALUES + LOCAL_VALUES
+                    && address < START_INT_VALUES + TEMP_VALUES
+                {
+                    val.values[0][array_index][position as usize] = Value::Int(value);
+                } else {
+                    self.var_values.values[0][array_index][position as usize] = Value::Int(value);
+                }
+            }
+            None => {
+                self.var_values.values[0][array_index][position as usize] = Value::Int(value);
+            }
+        }
     }
 
-    pub fn get_float(&self, address: i32, memory: Option<&Memory>) -> f32 {
+    pub fn get_float(&self, address: i32, memory: Option<&Memory>) -> f64 {
         let mut array_index = 0;
         let mut position = address - START_FLOAT_VALUES;
         let mut float_type = "var";
@@ -234,7 +252,7 @@ impl ValueTable {
                     Value::Float(val) => val,
                     _ => panic!("Invalid local address: {}", address),
                 },
-                None => 0 as f32,
+                None => 0 as f64,
             };
             return value;
         } else if address >= START_FLOAT_VALUES + TEMP_VALUES && address < START_CONST_FLOAT_VALUES
@@ -259,7 +277,7 @@ impl ValueTable {
         }
     }
 
-    pub fn set_float(&mut self, address: i32, value: f32, memory: Option<&mut Memory>) {
+    pub fn set_float(&mut self, address: i32, value: f64, memory: Option<&mut Memory>) {
         let mut array_index = 0;
         let mut position = address - START_FLOAT_VALUES;
         if address >= START_FLOAT_VALUES + LOCAL_VALUES
@@ -267,29 +285,49 @@ impl ValueTable {
         {
             array_index = 0;
             position = position - LOCAL_VALUES;
-            match memory {
-                Some(val) => {
-                    val.values[1][array_index][position as usize] = Value::Float(value);
-                }
-                None => {}
-            }
-            return;
         } else if address >= START_FLOAT_VALUES + TEMP_VALUES {
             array_index = 1;
             position = position - TEMP_VALUES;
         }
-        self.var_values.values[1][array_index][position as usize] = Value::Float(value);
-    }
-
-    pub fn get_bool(&self, address: i32) -> bool {
-        match self.var_values.values[2][0][(address - START_BOOL_VALUES) as usize] {
-            Value::Bool(value) => value,
-            _ => panic!("Invalid address"),
+        match memory {
+            Some(val) => {
+                if address >= START_FLOAT_VALUES + LOCAL_VALUES
+                    && address < START_FLOAT_VALUES + TEMP_VALUES
+                {
+                    val.values[1][array_index][position as usize] = Value::Float(value);
+                } else {
+                    self.var_values.values[1][array_index][position as usize] = Value::Float(value);
+                }
+            }
+            None => {
+                self.var_values.values[1][array_index][position as usize] = Value::Float(value);
+            }
         }
     }
 
-    pub fn set_bool(&mut self, address: i32, value: bool) {
-        self.var_values.values[2][0][(address - START_BOOL_VALUES) as usize] = Value::Bool(value);
+    pub fn get_bool(&self, address: i32, memory: Option<&Memory>) -> bool {
+        match memory {
+            Some(val) => match val.values[2][0][(address - START_BOOL_VALUES) as usize] {
+                Value::Bool(val) => val,
+                _ => panic!("Invalid address for bool in function memory"),
+            },
+            None => match self.var_values.values[2][0][(address - START_BOOL_VALUES) as usize] {
+                Value::Bool(value) => value,
+                _ => panic!("Invalid address for bool in global memory"),
+            },
+        }
+    }
+
+    pub fn set_bool(&mut self, address: i32, value: bool, memory: Option<&mut Memory>) {
+        match memory {
+            Some(val) => {
+                val.values[2][0][(address - START_BOOL_VALUES) as usize] = Value::Bool(value);
+            }
+            None => {
+                self.var_values.values[2][0][(address - START_BOOL_VALUES) as usize] =
+                    Value::Bool(value);
+            }
+        }
     }
 
     pub fn get_var_type(&self, address: i32) -> Type {

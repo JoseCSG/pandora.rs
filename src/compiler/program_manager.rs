@@ -23,6 +23,7 @@ pub struct ProgramManager {
     pub memory_stack: Stack<Memory>,
     pub function_ids: HashMap<i32, String>,
     position_before_fcall: Stack<i32>,
+    upcoming_function: Option<Memory>,
 }
 
 impl ProgramManager {
@@ -41,14 +42,19 @@ impl ProgramManager {
             memory_stack: Stack::new(),
             function_ids: HashMap::new(),
             position_before_fcall: Stack::new(),
+            upcoming_function: None,
         }
     }
 
     pub fn new_temp(&mut self, var_type: Type) -> i32 {
         match var_type {
-            Type::Int => self.value_table.insert_integer(0, "temp"),
-            Type::Float => self.value_table.insert_float(0.0, "temp"),
-            Type::Bool => self.value_table.insert_bool(false),
+            Type::Int => self
+                .value_table
+                .insert_integer(0, "temp", self.memory_stack.top()),
+            Type::Float => self
+                .value_table
+                .insert_float(0.0, "temp", self.memory_stack.top()),
+            Type::Bool => self.value_table.insert_bool(false, self.memory_stack.top()),
             _ => panic!("Invalid type"),
         }
     }
@@ -152,7 +158,7 @@ impl ProgramManager {
                         let arg2 = self
                             .value_table
                             .get_float(quad.arg2.unwrap(), self.memory_stack.top());
-                        let result = arg1 as f32 + arg2;
+                        let result = arg1 as f64 + arg2;
                         self.value_table.set_float(
                             quad.result.unwrap(),
                             result,
@@ -165,7 +171,7 @@ impl ProgramManager {
                         let arg2 = self
                             .value_table
                             .get_int(quad.arg2.unwrap(), self.memory_stack.top());
-                        let result = arg1 + arg2 as f32;
+                        let result = arg1 + arg2 as f64;
                         self.value_table.set_float(
                             quad.result.unwrap(),
                             result,
@@ -206,7 +212,7 @@ impl ProgramManager {
                         let arg2 = self
                             .value_table
                             .get_float(quad.arg2.unwrap(), self.memory_stack.top());
-                        let result = arg1 as f32 - arg2;
+                        let result = arg1 as f64 - arg2;
                         self.value_table.set_float(
                             quad.result.unwrap(),
                             result,
@@ -219,7 +225,7 @@ impl ProgramManager {
                         let arg2 = self
                             .value_table
                             .get_int(quad.arg2.unwrap(), self.memory_stack.top());
-                        let result = arg1 - arg2 as f32;
+                        let result = arg1 - arg2 as f64;
                         self.value_table.set_float(
                             quad.result.unwrap(),
                             result,
@@ -260,7 +266,7 @@ impl ProgramManager {
                         let arg2 = self
                             .value_table
                             .get_float(quad.arg2.unwrap(), self.memory_stack.top());
-                        let result = arg1 as f32 * arg2;
+                        let result = arg1 as f64 * arg2;
                         self.value_table.set_float(
                             quad.result.unwrap(),
                             result,
@@ -273,7 +279,7 @@ impl ProgramManager {
                         let arg2 = self
                             .value_table
                             .get_int(quad.arg2.unwrap(), self.memory_stack.top());
-                        let result = arg1 * arg2 as f32;
+                        let result = arg1 * arg2 as f64;
                         self.value_table.set_float(
                             quad.result.unwrap(),
                             result,
@@ -314,7 +320,7 @@ impl ProgramManager {
                         let arg2 = self
                             .value_table
                             .get_float(quad.arg2.unwrap(), self.memory_stack.top());
-                        let result = arg1 as f32 / arg2;
+                        let result = arg1 as f64 / arg2;
                         self.value_table.set_float(
                             quad.result.unwrap(),
                             result,
@@ -327,7 +333,7 @@ impl ProgramManager {
                         let arg2 = self
                             .value_table
                             .get_int(quad.arg2.unwrap(), self.memory_stack.top());
-                        let result = arg1 / arg2 as f32;
+                        let result = arg1 / arg2 as f64;
                         self.value_table.set_float(
                             quad.result.unwrap(),
                             result,
@@ -345,7 +351,11 @@ impl ProgramManager {
                             .value_table
                             .get_int(quad.arg2.unwrap(), self.memory_stack.top());
                         let result = arg1 > arg2;
-                        self.value_table.set_bool(quad.result.unwrap(), result);
+                        self.value_table.set_bool(
+                            quad.result.unwrap(),
+                            result,
+                            self.memory_stack.top_mut(),
+                        );
                     } else if arg1_type == Type::Float && arg2_type == Type::Float {
                         let arg1 = self
                             .value_table
@@ -354,14 +364,22 @@ impl ProgramManager {
                             .value_table
                             .get_float(quad.arg2.unwrap(), self.memory_stack.top());
                         let result = arg1 > arg2;
-                        self.value_table.set_bool(quad.result.unwrap(), result);
+                        self.value_table.set_bool(
+                            quad.result.unwrap(),
+                            result,
+                            self.memory_stack.top_mut(),
+                        );
                     } else if arg1_type == Type::Int && arg2_type == Type::Float {
                         let arg1 = self.value_table.get_int(quad.arg1, self.memory_stack.top());
                         let arg2 = self
                             .value_table
                             .get_float(quad.arg2.unwrap(), self.memory_stack.top());
-                        let result = arg1 as f32 > arg2;
-                        self.value_table.set_bool(quad.result.unwrap(), result);
+                        let result = arg1 as f64 > arg2;
+                        self.value_table.set_bool(
+                            quad.result.unwrap(),
+                            result,
+                            self.memory_stack.top_mut(),
+                        );
                     } else if arg1_type == Type::Float && arg2_type == Type::Int {
                         let arg1 = self
                             .value_table
@@ -369,8 +387,12 @@ impl ProgramManager {
                         let arg2 = self
                             .value_table
                             .get_int(quad.arg2.unwrap(), self.memory_stack.top());
-                        let result = arg1 > arg2 as f32;
-                        self.value_table.set_bool(quad.result.unwrap(), result);
+                        let result = arg1 > arg2 as f64;
+                        self.value_table.set_bool(
+                            quad.result.unwrap(),
+                            result,
+                            self.memory_stack.top_mut(),
+                        );
                     }
                 }
                 QuadOperator::LessThan => {
@@ -383,7 +405,11 @@ impl ProgramManager {
                             .value_table
                             .get_int(quad.arg2.unwrap(), self.memory_stack.top());
                         let result = arg1 < arg2;
-                        self.value_table.set_bool(quad.result.unwrap(), result);
+                        self.value_table.set_bool(
+                            quad.result.unwrap(),
+                            result,
+                            self.memory_stack.top_mut(),
+                        );
                     } else if arg1_type == Type::Float && arg2_type == Type::Float {
                         let arg1 = self
                             .value_table
@@ -392,14 +418,22 @@ impl ProgramManager {
                             .value_table
                             .get_float(quad.arg2.unwrap(), self.memory_stack.top());
                         let result = arg1 < arg2;
-                        self.value_table.set_bool(quad.result.unwrap(), result);
+                        self.value_table.set_bool(
+                            quad.result.unwrap(),
+                            result,
+                            self.memory_stack.top_mut(),
+                        );
                     } else if arg1_type == Type::Int && arg2_type == Type::Float {
                         let arg1 = self.value_table.get_int(quad.arg1, self.memory_stack.top());
                         let arg2 = self
                             .value_table
                             .get_float(quad.arg2.unwrap(), self.memory_stack.top());
-                        let result = (arg1 as f32) < arg2;
-                        self.value_table.set_bool(quad.result.unwrap(), result);
+                        let result = (arg1 as f64) < arg2;
+                        self.value_table.set_bool(
+                            quad.result.unwrap(),
+                            result,
+                            self.memory_stack.top_mut(),
+                        );
                     } else if arg1_type == Type::Float && arg2_type == Type::Int {
                         let arg1 = self
                             .value_table
@@ -407,12 +441,72 @@ impl ProgramManager {
                         let arg2 = self
                             .value_table
                             .get_int(quad.arg2.unwrap(), self.memory_stack.top());
-                        let result = arg1 < arg2 as f32;
-                        self.value_table.set_bool(quad.result.unwrap(), result);
+                        let result = arg1 < arg2 as f64;
+                        self.value_table.set_bool(
+                            quad.result.unwrap(),
+                            result,
+                            self.memory_stack.top_mut(),
+                        );
+                    }
+                }
+                QuadOperator::NotEqual => {
+                    let arg1_type = self.value_table.get_var_type(quad.arg1);
+                    let arg2_type = self.value_table.get_var_type(quad.arg2.unwrap());
+
+                    if arg1_type == Type::Int && arg2_type == Type::Int {
+                        let arg1 = self.value_table.get_int(quad.arg1, self.memory_stack.top());
+                        let arg2 = self
+                            .value_table
+                            .get_int(quad.arg2.unwrap(), self.memory_stack.top());
+                        let result = arg1 != arg2;
+                        self.value_table.set_bool(
+                            quad.result.unwrap(),
+                            result,
+                            self.memory_stack.top_mut(),
+                        );
+                    } else if arg1_type == Type::Float && arg2_type == Type::Float {
+                        let arg1 = self
+                            .value_table
+                            .get_float(quad.arg1, self.memory_stack.top());
+                        let arg2 = self
+                            .value_table
+                            .get_float(quad.arg2.unwrap(), self.memory_stack.top());
+                        let result = arg1 != arg2;
+                        self.value_table.set_bool(
+                            quad.result.unwrap(),
+                            result,
+                            self.memory_stack.top_mut(),
+                        );
+                    } else if arg1_type == Type::Int && arg2_type == Type::Float {
+                        let arg1 = self.value_table.get_int(quad.arg1, self.memory_stack.top());
+                        let arg2 = self
+                            .value_table
+                            .get_float(quad.arg2.unwrap(), self.memory_stack.top());
+                        let result = (arg1 as f64) < arg2;
+                        self.value_table.set_bool(
+                            quad.result.unwrap(),
+                            result,
+                            self.memory_stack.top_mut(),
+                        );
+                    } else if arg1_type == Type::Float && arg2_type == Type::Int {
+                        let arg1 = self
+                            .value_table
+                            .get_float(quad.arg1, self.memory_stack.top());
+                        let arg2 = self
+                            .value_table
+                            .get_int(quad.arg2.unwrap(), self.memory_stack.top());
+                        let result = arg1 != arg2 as f64;
+                        self.value_table.set_bool(
+                            quad.result.unwrap(),
+                            result,
+                            self.memory_stack.top_mut(),
+                        );
                     }
                 }
                 QuadOperator::GotoF => {
-                    let var_value = self.value_table.get_bool(quad.arg1);
+                    let var_value = self
+                        .value_table
+                        .get_bool(quad.arg1, self.memory_stack.top());
                     if var_value == false {
                         self.instruction_pointer = quad.arg2.unwrap();
                         continue;
@@ -442,37 +536,22 @@ impl ProgramManager {
                 }
                 QuadOperator::Print => {
                     let var_type = self.value_table.get_var_type(quad.arg1);
-                    let next_quad_op = convert_quad_op_to_code(
-                        self.quadruplets
-                            .get(self.instruction_pointer + 1)
-                            .unwrap()
-                            .operator,
-                    );
 
                     match var_type {
                         Type::Int => {
                             let value =
                                 self.value_table.get_int(quad.arg1, self.memory_stack.top());
-                            match next_quad_op {
-                                QuadOperator::Print => print!("{}", value),
-                                _ => println!("{}", value),
-                            }
+                            println!("{}", value);
                         }
                         Type::Float => {
                             let value = self
                                 .value_table
                                 .get_float(quad.arg1, self.memory_stack.top());
-                            match next_quad_op {
-                                QuadOperator::Print => print!("{}", value),
-                                _ => println!("{}", value),
-                            }
+                            println!("{}", value);
                         }
                         Type::String => {
                             let value = self.value_table.get_string(quad.arg1);
-                            match next_quad_op {
-                                QuadOperator::Print => print!("{}", value),
-                                _ => println!("{}", value),
-                            }
+                            println!("{}", value);
                         }
                         _ => {
                             panic!(
@@ -486,16 +565,26 @@ impl ProgramManager {
                     let function_name = self.function_ids.get(&quad.arg1).unwrap();
                     let function_info =
                         &self.tabla_funciones.get(function_name).unwrap().vars_amount;
-                    let local_int_amount = function_info[0];
-                    let local_float_amount = function_info[1];
+                    let local_int_amount = function_info[0][0];
+                    let temp_int_amount = function_info[0][1];
+                    let local_float_amount = function_info[1][0];
+                    let temp_float_amount = function_info[1][1];
+                    let temp_bool_amount = function_info[2][0];
 
                     let curr_memory = Memory {
                         values: vec![
-                            vec![vec![Value::Int(0); local_int_amount as usize]],
-                            vec![vec![Value::Float(0.0); local_float_amount as usize]],
+                            vec![
+                                vec![Value::Int(0); local_int_amount as usize],
+                                vec![Value::Int(0); temp_int_amount as usize],
+                            ],
+                            vec![
+                                vec![Value::Float(0.0); local_float_amount as usize],
+                                vec![Value::Float(0.0); temp_float_amount as usize],
+                            ],
+                            vec![vec![Value::Bool(false); temp_bool_amount as usize]],
                         ],
                     };
-                    self.memory_stack.push(curr_memory);
+                    self.upcoming_function = Some(curr_memory);
                 }
                 QuadOperator::Param => {
                     if quad.arg2.unwrap() >= 5000 {
@@ -505,7 +594,7 @@ impl ProgramManager {
                         self.value_table.set_float(
                             quad.arg2.unwrap(),
                             var_value,
-                            self.memory_stack.top_mut(),
+                            self.upcoming_function.as_mut(),
                         );
                     } else {
                         let var_value =
@@ -513,11 +602,15 @@ impl ProgramManager {
                         self.value_table.set_int(
                             quad.arg2.unwrap(),
                             var_value,
-                            self.memory_stack.top_mut(),
+                            self.upcoming_function.as_mut(),
                         );
                     }
                 }
                 QuadOperator::GoSub => {
+                    self.memory_stack
+                        .push(self.upcoming_function.clone().unwrap());
+                    self.upcoming_function = None;
+
                     let function_name = self.function_ids.get(&quad.arg1).unwrap();
                     let function_start_address = &self
                         .tabla_funciones

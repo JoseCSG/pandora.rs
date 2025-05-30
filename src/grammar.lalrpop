@@ -26,8 +26,8 @@ extern {
     "id" => Token::Id(_String),
     "intType" => Token::IntDatatype,
     "floatType" => Token::FloatDatatype,
-    "number" => Token::Number(_i32),
-    "float" => Token::Float(_f32),
+    "number" => Token::Number(_i64),
+    "float" => Token::Float(_f64),
     "string" => Token::String(_String),
     "+" => Token::OpAdd,
     "-" => Token::OpSub,
@@ -245,21 +245,32 @@ NegativeSign: Option<()> = {
 Factor: () = {
   "(" <exp: Expresion> ")" => exp,
   <val: Id> => {
-    let current_function = program_manager.curr_function.top().unwrap();
-
+    let current_function = program_manager.curr_function.pop().unwrap();
     let var_info = match program_manager.tabla_funciones.get(current_function.as_str()).unwrap().vars.get(&val) {
       Some(info) => info,
-      None => match program_manager.tabla_funciones.get("main").unwrap().vars.get(&val) {
-        Some(info) => info,
-        None => panic!("There's no variable {}", val),
+      None => {
+        let previous_function = program_manager.curr_function.top();
+        match previous_function {
+          Some(func_name) => {
+            match program_manager.tabla_funciones.get(func_name.as_str()).unwrap().vars.get(&val) {
+              Some(info) => info,
+              None => match program_manager.tabla_funciones.get("main").unwrap().vars.get(&val) {
+                Some(info) => info,
+                None => panic!("There's no variable {}", val),
+              }
+            }
+          }
+          None => match program_manager.tabla_funciones.get("main").unwrap().vars.get(&val) {
+            Some(info) => info,
+            None => panic!("There's no variable {}", val),
+          }
+        }
       }
     };
+
+    program_manager.curr_function.push(current_function);
     program_manager.operand_stack.push(var_info.address);
     program_manager.polish_vector.push(var_info.name.clone());
-    let var_type = match var_info.var_type {
-      semantic_tables::VarType::Int => semantic_cube::Type::Int,
-      semantic_tables::VarType::Float => semantic_cube::Type::Float,
-    };
   },
   <negative_sign:NegativeSign> <val: Cte> => {
       if negative_sign.is_some() {
@@ -536,9 +547,10 @@ VarsPrime: Vec<semantic_tables::VariableInfo> = {
         "main" => "global".to_string(),
         _ => "local".to_string(),
       };
+      //TODO: Check if values are being created correctly
       let address = match val {
-        semantic_cube::Type::Int => program_manager.value_table.insert_integer(0, &var_scope),
-        semantic_cube::Type::Float => program_manager.value_table.insert_float(0.0, &var_scope),
+        semantic_cube::Type::Int => program_manager.value_table.insert_integer(0, &var_scope, program_manager.memory_stack.top()),
+        semantic_cube::Type::Float => program_manager.value_table.insert_float(0.0, &var_scope, program_manager.memory_stack.top()),
         _ => panic!("Invalid type"),
       };
       let _var_type: semantic_tables::VarType = match val {
@@ -602,6 +614,15 @@ FunctionId: String = {
 
 EndFunction: () = {
   ";" => {
+    let func_table = & mut program_manager.tabla_funciones.get_mut(program_manager.curr_function.top().unwrap().as_str()).unwrap();
+
+    func_table.vars_amount[0][0] = *program_manager.value_table.counters.get("int_local").unwrap_or(&0) as i32;
+    func_table.vars_amount[0][1] = *program_manager.value_table.counters.get("int_temp").unwrap_or(&0) as i32;
+    func_table.vars_amount[1][0] = *program_manager.value_table.counters.get("float_local").unwrap_or(&0) as i32;
+    func_table.vars_amount[1][1] = *program_manager.value_table.counters.get("float_temp").unwrap_or(&0) as i32;
+    func_table.vars_amount[2][0] = *program_manager.value_table.counters.get("bool_temp").unwrap_or(&0) as i32;
+
+    program_manager.value_table.clear_local_vars();
     program_manager.create_quad(QuadOperator::EndFunc, 0, None, None);
     program_manager.curr_function.pop();
   }
@@ -617,9 +638,9 @@ FunctionParams: () = {
 
         let address;
         if param.var_type == semantic_tables::VarType::Int {
-          address =  program_manager.value_table.insert_integer(0, "local");
+          address =  program_manager.value_table.insert_integer(0, "local", program_manager.memory_stack.top());
         } else {
-          address =  program_manager.value_table.insert_float(0.0, "local");
+          address =  program_manager.value_table.insert_float(0.0, "local", program_manager.memory_stack.top());
         }
 
         let var_info = semantic_tables::VariableInfo 
@@ -633,7 +654,7 @@ FunctionParams: () = {
     program_manager.tabla_funciones.insert(program_manager.curr_function.top().unwrap().clone(), 
       semantic_tables::FunctionInfo { 
           name: program_manager.curr_function.top().unwrap().to_string(), params: _params, 
-          vars: temp_tabla_vars, vars_amount: vec![0,0],
+          vars: temp_tabla_vars, vars_amount: vec![vec![0, 0], vec![0, 0], vec![0]],
           start_address: program_manager.jumps_stack.pop().unwrap()
           });
   }
@@ -652,9 +673,6 @@ FunctionVars: () = {
         func_table.vars.insert(var_info.name.clone(), var_info.clone());
       }
     }
-    func_table.vars_amount[0] = *program_manager.value_table.counters.get("int_local").unwrap_or(&0) as i32;
-    func_table.vars_amount[1] = *program_manager.value_table.counters.get("float_local").unwrap_or(&0) as i32;
-    program_manager.value_table.clear_local_vars();
    }
 }
 

@@ -2,8 +2,8 @@ use std::collections::HashMap;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum VarValue {
-    Int(i32),
-    Float(f32),
+    Int(i64),
+    Float(f64),
     Bool(bool),
 }
 
@@ -32,7 +32,7 @@ pub struct FunctionInfo {
     pub name: String,
     pub params: Vec<FunctionParam>,
     pub vars: VariableTable,
-    pub vars_amount: Vec<i32>,
+    pub vars_amount: Vec<Vec<i32>>,
     pub start_address: i32,
 }
 
