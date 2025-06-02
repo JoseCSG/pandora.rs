@@ -6,7 +6,7 @@ program test_one;
         var pi:float;
         {
             pi = 3.1416;
-            print(r * r * pi);
+            print(r * r * pi);  
         }
     ];
 

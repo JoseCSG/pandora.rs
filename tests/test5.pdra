@@ -1,5 +1,5 @@
 program test_three;
-    var a,b,c,d :int;
+    var a,b,c,d,i :int;
         e,f,g,h :float;
     void suerte(a: int)[
         var test, algo :float;
@@ -24,7 +24,7 @@ main {
             i = i + 1;
         }        
     } else {
-        test(3,2,1);
+        test(3,2.3,1);
         i = 22;
     }
 }
